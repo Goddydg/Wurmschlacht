@@ -1,6 +1,6 @@
 # Wurmschlacht
 
-Rundenbasiertes Artillerie-Spiel für drei Spieler an einem Handy. Die Würmer kämpfen auf zerstörbarem Gelände, mit Wind, Bazooka, Granate und Dynamit. Wer als Letzter noch einen Wurm hat, gewinnt.
+Rundenbasiertes Artillerie-Spiel für drei Spieler an einem Handy. Die Würmer kämpfen auf zerstörbarem Gelände, mit Wind, zehn Waffen, Kisten, Minen und Ölfässern. Wer als Letzter noch einen Wurm hat, gewinnt.
 
 Das Spiel ist eine einzige Datei (`index.html`) ohne Build-Schritt und ohne Abhängigkeiten. Nur die beiden Schriften kommen von Google Fonts. Ohne Netz läuft es mit Ersatzschriften.
 
@@ -8,7 +8,7 @@ Das Spiel ist eine einzige Datei (`index.html`) ohne Build-Schritt und ohne Abh�
 
 Datei `index.html` im Browser öffnen, am besten auf dem Handy.
 
-Mit GitHub Pages lässt es sich als Webseite bereitstellen: In den Repo-Einstellungen unter *Pages* den Branch `main` und den Ordner `/ (root)` wählen. Bei einem privaten Repo ist Pages je nach GitHub-Tarif nicht verfügbar.
+Mit GitHub Pages lässt es sich als Webseite bereitstellen: In den Repo-Einstellungen unter *Pages* den Branch `main` und den Ordner `/ (root)` wählen.
 
 ## Bedienung
 
@@ -17,15 +17,40 @@ Mit GitHub Pages lässt es sich als Webseite bereitstellen: In den Repo-Einstell
 | Links / Rechts | Wurm laufen lassen |
 | Höher / Tiefer | Zielwinkel ändern |
 | Sprung | Springen |
-| Feuer (halten) | Kraft aufladen, beim Loslassen schießen |
-| Karte | Ganze Karte anzeigen |
+| Waffenleiste | Waffenmenü öffnen, nur während des Zielens |
+| Feuer | Bazooka, Granate und Clusterbombe: halten für Kraft, loslassen zum Schießen. Alle anderen Waffen: antippen |
+
+**Zoomen und Verschieben:** Zwei Finger auseinander oder zusammen ziehen zoomt, ein Finger verschiebt die Ansicht, am Rechner zoomt das Mausrad. Die Knöpfe `+` und `−` am rechten Rand zoomen schrittweise, der Knopf mit dem Fadenkreuz springt zurück zum aktiven Wurm. Der Knopf `Karte` oben links zeigt das ganze Spielfeld.
 
 Tastatur am Rechner: Pfeiltasten, `J` für Sprung, Leertaste für Feuer.
 
-**Waffen:** Bazooka (wird vom Wind abgelenkt), Granate (springt, explodiert nach 3 Sekunden) und Dynamit (wird abgelegt, pro Team 2×).
+## Waffen
 
-**Ablauf:** Die Teams sind abwechselnd dran, pro Zug gibt es 30 Sekunden. Nach dem Schuss bleibt kurz Zeit zum Rückzug. Danach erscheint die Übergabe an das nächste Team. Würmer, die ins Wasser fallen, scheiden aus. Zu Beginn wählst du 2, 3 oder 4 Würmer pro Team.
+| Waffe | Munition | Besonderheit |
+| --- | --- | --- |
+| Bazooka | unbegrenzt | Wind lenkt die Rakete ab |
+| Granate | unbegrenzt | springt, explodiert nach 3 Sekunden |
+| Clusterbombe | 2 | zerfällt in 5 kleine Bomben |
+| Schrotflinte | 4 | 2 Schüsse pro Zug |
+| Schläger | 3 | schleudert Gegner in Zielrichtung weg |
+| Dynamit | 2 | wird abgelegt, 4 Sekunden Zündzeit |
+| Mine | 2 | scharf nach kurzer Zeit, zündet bei Annäherung |
+| Sprengschaf | 1 | läuft los, explodiert bei Kontakt, nach 5 Sekunden oder per Feuer-Tipp |
+| Luftschlag | 1 | Ziel auf der Karte antippen, 5 Bomben fallen |
+| Teleport | 1 | Ziel antippen, der Zug geht danach weiter |
+
+## Kisten und Hindernisse
+
+- **Erste-Hilfe-Kiste:** gibt dem Wurm, der sie berührt, 35 HP (bis maximal 150).
+- **Waffenkiste:** gibt dem Team eine Waffe zusätzlich.
+- **Kisten** fallen zu Beginn eines Zugs mit etwa 50 % Wahrscheinlichkeit an einem Fallschirm vom Himmel.
+- **Minen** liegen von Anfang an auf der Karte und zünden, wenn ein Wurm zu nah kommt.
+- **Ölfässer** explodieren bei Treffern und zünden benachbarte Fässer.
+
+## Ablauf
+
+Die Teams sind abwechselnd dran, pro Zug gibt es 30 Sekunden. Nach dem Schuss bleibt kurz Zeit zum Rückzug. Danach erscheint die Übergabe an das nächste Team. Würmer, die ins Wasser fallen, scheiden aus. Zu Beginn wählst du 2, 3 oder 4 Würmer pro Team.
 
 ## Aufbau
 
-Alles steckt in `index.html`: Stil, Markup und Spiellogik (Canvas). Die Spielfeldgröße, die Waffenwerte (`WEAPONS`) und die Teamfarben (`COL`) stehen am Anfang des Skripts.
+Alles steckt in `index.html`: Stil, Markup und Spiellogik (Canvas). Die Spielfeldgröße, die Waffentabelle (`WEAPONS`) und die Teamfarben (`COL`) stehen am Anfang des Skripts.

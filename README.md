@@ -90,7 +90,8 @@ Bäume, Kakteen und Felsen sind nur Deko: Sie halten nichts auf und werden mit d
 
 - **Erste-Hilfe-Kiste:** gibt dem Wurm, der sie berührt, 35 HP (bis maximal 150).
 - **Waffenkiste:** gibt dem Team Munition für eine Waffe.
-- **Kisten** bringt zu Beginn eines Zugs mit etwa 50 % Wahrscheinlichkeit ein kleines Propellerflugzeug mit Wurm-Pilot. Es fliegt über die Landschaft und wirft die Kiste an einem Fallschirm ab.
+- **Kisten** bringt ab und zu ein kleines Propellerflugzeug mit Wurm-Pilot. Es fliegt über die Landschaft und wirft die Kiste an einem Fallschirm ab. Wie oft, stellst du im Startmenü unter *Kisten* ein: *Aus*, *Selten*, *Normal* (etwa jeder vierte Zug, nie zwei Züge hintereinander, höchstens zwei Kisten gleichzeitig) oder *Oft*.
+- **Den Kisten sieht man den Inhalt an:** Erste Hilfe ist ein weißer Koffer mit rotem Kreuz. Sprengstoff (Clusterbombe, Dynamit, Mine, Sprengschaf, Kamikaze, Luftschlag) kommt in einer Holzkiste, Waffen (Schrotflinte, Schläger) in einer olivgrünen Munitionskiste, Werkzeug (Ninja-Seil, Teleport) in einem blauen Werkzeugkoffer. Vorne auf jeder Kiste ist ein Bild des Inhalts.
 - **Minen** liegen von Anfang an auf der Karte und zünden, wenn ein Wurm zu nah kommt.
 - **Ölfässer** explodieren bei Treffern und zünden benachbarte Fässer.
 

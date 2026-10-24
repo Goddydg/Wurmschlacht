@@ -44,10 +44,10 @@ button,input{font:inherit;color:inherit}
 
 .hud{display:flex;gap:8px;padding-block:8px;background:var(--bg);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.chip{flex:1;min-width:0;display:grid;gap:4px;padding:6px 8px;border-radius:8px;background:var(--panel);border:2px solid transparent}
+.chip{flex:1;min-width:0;overflow:hidden;display:grid;gap:4px;padding:6px 8px;border-radius:8px;background:var(--panel);border:2px solid transparent}
 .chip.on{border-color:var(--c)}
 .chip.out{opacity:.4}
-.chip .nm{display:flex;align-items:center;gap:6px;font-weight:700;white-space:nowrap}
+.chip .nm{display:flex;align-items:center;gap:6px;font-weight:700;white-space:nowrap;min-width:0}
 .chip .nm i{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
 .chip .nm span{overflow:hidden;text-overflow:ellipsis;min-width:0}
 .chip .hp{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
@@ -110,18 +110,26 @@ button,input{font:inherit;color:inherit}
 @supports (background:color-mix(in srgb,red 50%,blue)){
   .overlay{background:color-mix(in srgb,var(--bg) 90%,transparent)}
 }
-.card{margin:auto;width:min(100%,420px);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:14px;box-sizing:border-box}
+.card{margin:auto;width:min(100%,420px);grid-template-columns:minmax(0,1fr);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;display:grid;gap:14px;box-sizing:border-box}
 h1,h2{font-family:var(--display);font-weight:400;line-height:1.05;margin:0;text-wrap:balance}
-h1{font-size:36px}
+h1{font-size:clamp(28px,9vw,36px)}
 h2{font-size:28px}
 p{margin:0;color:var(--muted);line-height:1.35}
 .names{display:grid;gap:8px}
 .names .row{display:flex;align-items:center;gap:10px}
-.who{flex:none;min-width:96px;height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:700;cursor:pointer}
+.who{flex:none;min-width:88px;height:44px;padding:0 12px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:700;cursor:pointer}
 .who[data-cpu="1"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.ally{flex:none;width:44px;height:44px;border-radius:10px;border:0;font-weight:700;font-size:17px;cursor:pointer;background:var(--fg);color:var(--bg)}
+.ally[data-a="1"]{background:var(--accent);color:var(--on-accent)}
+.ally:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.allyhint{font-size:13px;margin-top:8px}
+.setupmsg{color:var(--accent);font-weight:700}
+.chip .nm em{font-style:normal;font-size:11px;line-height:1;padding:3px 5px;border-radius:4px;background:var(--fg);color:var(--bg);flex:none}
+.chip .nm em.b{background:var(--accent);color:var(--on-accent)}
+.winnames{font-weight:700;color:var(--fg)}
 .who:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 .names i{width:14px;height:14px;border-radius:50%;flex:none;background:var(--c)}
-.names input{flex:1;min-width:0;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-size:16px;-webkit-user-select:text;user-select:text}
+.names input{flex:1;width:0;min-width:0;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);padding:0 12px;font-size:16px;-webkit-user-select:text;user-select:text}
 .names input:focus-visible{outline:3px solid var(--accent);outline-offset:1px}
 .lbl{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
@@ -234,11 +242,19 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
         </div>
       </div>
       <div class="names">
-        <div class="row" id="row0"><i style="--c:var(--t0)"></i><input id="n0" maxlength="14" placeholder="Spieler 1" aria-label="Name Spieler 1"><button class="who" id="who0" type="button" data-cpu="0" aria-label="Spieler 1: Mensch">Mensch</button></div>
-        <div class="row" id="row1"><i style="--c:var(--t1)"></i><input id="n1" maxlength="14" placeholder="Spieler 2" aria-label="Name Spieler 2"><button class="who" id="who1" type="button" data-cpu="0" aria-label="Spieler 2: Mensch">Mensch</button></div>
-        <div class="row" id="row2"><i style="--c:var(--t2)"></i><input id="n2" maxlength="14" placeholder="Spieler 3" aria-label="Name Spieler 3"><button class="who" id="who2" type="button" data-cpu="0" aria-label="Spieler 3: Mensch">Mensch</button></div>
-        <div class="row" id="row3" hidden><i style="--c:var(--t3)"></i><input id="n3" maxlength="14" placeholder="Spieler 4" aria-label="Name Spieler 4"><button class="who" id="who3" type="button" data-cpu="0" aria-label="Spieler 4: Mensch">Mensch</button></div>
+        <div class="row" id="row0"><i style="--c:var(--t0)"></i><input id="n0" maxlength="14" placeholder="Spieler 1" aria-label="Name Spieler 1"><button class="ally" id="ally0" type="button" data-a="0" aria-label="Spieler 1: Team A" hidden>A</button><button class="who" id="who0" type="button" data-cpu="0" aria-label="Spieler 1: Mensch">Mensch</button></div>
+        <div class="row" id="row1"><i style="--c:var(--t1)"></i><input id="n1" maxlength="14" placeholder="Spieler 2" aria-label="Name Spieler 2"><button class="ally" id="ally1" type="button" data-a="1" aria-label="Spieler 2: Team B" hidden>B</button><button class="who" id="who1" type="button" data-cpu="0" aria-label="Spieler 2: Mensch">Mensch</button></div>
+        <div class="row" id="row2"><i style="--c:var(--t2)"></i><input id="n2" maxlength="14" placeholder="Spieler 3" aria-label="Name Spieler 3"><button class="ally" id="ally2" type="button" data-a="0" aria-label="Spieler 3: Team A" hidden>A</button><button class="who" id="who2" type="button" data-cpu="0" aria-label="Spieler 3: Mensch">Mensch</button></div>
+        <div class="row" id="row3" hidden><i style="--c:var(--t3)"></i><input id="n3" maxlength="14" placeholder="Spieler 4" aria-label="Name Spieler 4"><button class="ally" id="ally3" type="button" data-a="1" aria-label="Spieler 4: Team B" hidden>B</button><button class="who" id="who3" type="button" data-cpu="0" aria-label="Spieler 4: Mensch">Mensch</button></div>
       </div>
+      <div id="allyblock" hidden>
+        <div class="lbl">Spielart</div>
+        <div class="seg two" id="allymode">
+          <button data-m="ffa" class="on">Jeder gegen jeden</button><button data-m="teams">Teams</button>
+        </div>
+        <p class="allyhint" id="allyhint" hidden>Tippe bei jedem Spieler auf A oder B. Die Teams sind abwechselnd dran, gewonnen hat das Team, das als letztes noch Würmer hat.</p>
+      </div>
+      <p class="setupmsg" id="setupmsg" role="alert" hidden></p>
       <div>
         <div class="lbl">Würmer pro Team</div>
         <div class="seg" id="per">
@@ -291,7 +307,7 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
       <div class="lbl">Handy weitergeben an</div>
       <div class="big" id="handname">Spieler</div>
       <div class="pal"><canvas id="handpic" width="160" height="160" aria-hidden="true"></canvas><div><div class="pname" id="handworm">Wurm</div><small id="handstats"></small></div></div>
-      <div class="facts"><span id="handwind">Wind</span><span id="handsd" hidden>Wasser steigt</span></div>
+      <div class="facts"><span id="handally" hidden></span><span id="handwind">Wind</span><span id="handsd" hidden>Wasser steigt</span></div>
       <button class="go" id="ready">Los</button>
     </div>
   </div>
@@ -300,6 +316,7 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
     <div class="card" id="wincard">
       <div class="band"></div>
       <h2 id="wintext">Gewonnen</h2>
+      <p class="winnames" id="winnames" hidden></p>
       <div class="pal" id="mvp" hidden><canvas id="winpic" width="160" height="160" aria-hidden="true"></canvas><div><div class="lbl">Held des Spiels</div><div class="pname" id="mvpname"></div><small id="mvpinfo"></small></div></div>
       <button class="go" id="rematch">Revanche</button>
       <button class="ghost" id="menu">Neue Einstellungen</button>
@@ -353,7 +370,7 @@ const G = {
   team: -1, cur: null, wind: 0, timeLeft: 0, retreat: 0, aim: 35, power: 0, charging: false, weapon: 0,
   cam: { x: W / 2, y: H / 2 }, shake: 0, t: 0, settle: 0, per: 3, wptr: [0, 0, 0], ammo: [{}, {}, {}], overview: false,
   free: false, userScale: null, target: null, shotsLeft: 0, cool: 0, mines: [], barrels: [], crates: [],
-  turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
+  mode: 'ffa', ally: null, aptr: {}, turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
   bubbles: [], sayQ: [], clouds: [], amb: [], sayCd: 0, graves: [], turnDmg: 0, fired: false
 };
 const keys = { left: false, right: false, up: false, down: false };
@@ -637,7 +654,7 @@ function hurt(w, d) {
   w.hp -= d;
   floatText(w.x, w.y - 18, '-' + d, '#fff');
   // everything that happens during a turn counts for the worm whose turn it is
-  if (by && by.team !== w.team) { by.gdmg += real; by.rec.dmg = (by.rec.dmg | 0) + real; G.turnDmg += real; }
+  if (by && foes(by.team, w.team)) { by.gdmg += real; by.rec.dmg = (by.rec.dmg | 0) + real; G.turnDmg += real; }
   w.ouch = 40;
   if (w.hp > 0) say(w, d >= 30 ? 'bighurt' : 'hurt', { chance: d >= 30 ? 0.9 : 0.6 });
 }
@@ -800,7 +817,7 @@ function die(w, drowned) {
   say(w, drowned ? (theme.liquid === 'Lava' ? 'burn' : 'drown') : 'die', { force: true });
   if (!drowned) G.graves.push({ x: w.x, y: w.y, vy: 0, col: COL[w.team], name: w.name });
   const by = G.cur;
-  if (by && by !== w && by.team !== w.team) {
+  if (by && by !== w && foes(by.team, w.team)) {
     by.rec.kills = (by.rec.kills | 0) + 1;
     if (by.alive) say(by, 'kill', { delay: 80, chance: 0.9 });
   }
@@ -1250,7 +1267,23 @@ function toast(msg) {
 }
 const teamIds = () => G.teams.map((t, i) => i);
 const aliveTeams = () => teamIds().filter((t) => G.worms.some((w) => w.alive && w.team === t));
+// in team mode players are grouped into Team A and B; otherwise every player is their own alliance
+const ALLY_N = ['Team A', 'Team B'];
+const allyOf = (t) => (G.ally && G.ally[t] != null ? G.ally[t] : t);
+const foes = (a, b) => allyOf(a) !== allyOf(b);
+const aliveAllies = () => aliveTeams().map(allyOf).filter((a, i, l) => l.indexOf(a) === i).sort((a, b) => a - b);
 function nextTeam(from) {
+  if (G.mode === 'teams') {
+    // the teams take turns; inside a team its players rotate
+    const alive = aliveTeams(), al = aliveAllies();
+    if (!alive.length) return -1;
+    const cur = from >= 0 ? allyOf(from) : -1;
+    const next = al.find((a) => a > cur);
+    const a = next == null ? al[0] : next;
+    const members = alive.filter((t) => allyOf(t) === a);
+    G.aptr[a] = (G.aptr[a] == null ? -1 : G.aptr[a]) + 1;
+    return members[G.aptr[a] % members.length];
+  }
   for (let i = 1; i <= G.n; i++) {
     const t = (from + i + G.n) % G.n;
     if (G.worms.some((w) => w.alive && w.team === t)) return t;
@@ -1304,8 +1337,9 @@ function pickWeapon(i) {
 }
 function buildHud() {
   $('hud').innerHTML = G.teams.map((t, i) =>
-    '<div class="chip" id="chip' + i + '" style="--c:' + COL[i] + '"><div class="nm"><i></i><span>' + esc(t) +
-    '</span></div><div class="hp"><b></b></div><small></small></div>').join('');
+    '<div class="chip" id="chip' + i + '" style="--c:' + COL[i] + '"><div class="nm"><i></i><span>' + esc(t) + '</span>' +
+    (G.mode === 'teams' ? '<em class="' + (allyOf(i) ? 'b' : 'a') + '">' + 'AB'[allyOf(i)] + '</em>' : '') +
+    '</div><div class="hp"><b></b></div><small></small></div>').join('');
 }
 function updateHud() {
   for (let i = 0; i < G.n; i++) {
@@ -1321,7 +1355,7 @@ function updateHud() {
   }
 }
 function beginTurn() {
-  const alive = aliveTeams();
+  const alive = aliveAllies();
   if (alive.length <= 1) { endGame(alive.length ? alive[0] : -1); return; }
   const t = nextTeam(G.team);
   G.team = t; G.cur = pickWorm(t); G.turnNo++; G.ai = null;
@@ -1336,6 +1370,8 @@ function beginTurn() {
   $('sheet').hidden = true;
   $('handcard').style.setProperty('--c', COL[t]);
   $('handname').textContent = G.teams[t];
+  $('handally').hidden = G.mode !== 'teams';
+  $('handally').textContent = ALLY_N[allyOf(t)] || '';
   $('handworm').textContent = G.cur.name;
   $('handstats').textContent = statsText(G.cur.rec);
   drawPortrait($('handpic'), G.cur.look, COL[t], 'happy');
@@ -1364,13 +1400,17 @@ function startTurn() {
   sfx('turn');
   say(G.cur, 'turn', { delay: 20, force: true });
 }
-function endGame(t) {
+// a is the winning alliance (a player in free-for-all), -1 for a draw
+function endGame(a) {
   setPhase('over');
-  $('wincard').style.setProperty('--c', t >= 0 ? COL[t] : 'var(--muted)');
-  $('wintext').textContent = t >= 0 ? G.teams[t] + ' gewinnt' : 'Unentschieden';
+  const win = a >= 0 ? teamIds().filter((t) => allyOf(t) === a) : [];
+  $('wincard').style.setProperty('--c', !win.length ? 'var(--muted)' : win.length === 1 ? COL[win[0]] : 'linear-gradient(90deg,' + win.map((t) => COL[t]).join(',') + ')');
+  $('wintext').textContent = !win.length ? 'Unentschieden' : G.mode === 'teams' ? ALLY_N[a] + ' gewinnt' : G.teams[win[0]] + ' gewinnt';
+  $('winnames').hidden = G.mode !== 'teams' || !win.length;
+  $('winnames').textContent = win.map((t) => G.teams[t]).join(' & ');
   G.worms.forEach((w) => {
     w.rec.games = (w.rec.games | 0) + 1;
-    if (w.team === t) w.rec.wins = (w.rec.wins | 0) + 1;
+    if (win.indexOf(w.team) >= 0) w.rec.wins = (w.rec.wins | 0) + 1;
     if (w.alive) say(w, 'win', { chance: 0.8 });
   });
   saveRosters();
@@ -1399,10 +1439,20 @@ function startGame() {
   const tt = document.querySelector('#ttime .on');
   G.turnTime = tt ? +tt.dataset.t : 30;
   const ld = document.querySelector('#land .on'), lid = ld ? ld.dataset.land : 'zufall';
+  const teamMode = G.n >= 3 && !$('allyblock').hidden && document.querySelector('#allymode .on').dataset.m === 'teams';
+  const allies = ids.map((i) => (teamMode ? +$('ally' + i).dataset.a : i));
+  if (teamMode && allies.every((a) => a === allies[0])) {
+    $('setupmsg').textContent = 'Beide Teams brauchen mindestens einen Spieler. Stelle einen Spieler auf ' + (allies[0] ? 'A' : 'B') + '.';
+    $('setupmsg').hidden = false;
+    return;
+  }
+  $('setupmsg').hidden = true;
+  G.mode = teamMode ? 'teams' : 'ffa'; G.ally = allies; G.aptr = {};
   G.teams = ids.map((i) => $('n' + i).value.trim() || (G.cpu[i] ? 'Computer ' : 'Spieler ') + (i + 1));
   try {
     localStorage.setItem('wurm-names', JSON.stringify([0, 1, 2, 3].map((i) => $('n' + i).value.trim())));
-    localStorage.setItem('wurm-setup', JSON.stringify({ n: G.n, cpu: [0, 1, 2, 3].map((i) => $('who' + i).dataset.cpu === '1'), land: lid, time: G.turnTime }));
+    localStorage.setItem('wurm-setup', JSON.stringify({ n: G.n, cpu: [0, 1, 2, 3].map((i) => $('who' + i).dataset.cpu === '1'), land: lid, time: G.turnTime,
+      mode: G.n >= 3 ? (teamMode ? 'teams' : 'ffa') : undefined, ally: [0, 1, 2, 3].map((i) => +$('ally' + i).dataset.a) }));
   } catch (e) { /* optional */ }
   const on = document.querySelector('#per .on');
   G.per = on ? +on.dataset.per : 3;
@@ -1561,7 +1611,7 @@ function simShot(id, w, face, deg, pw) {
 function harm(o, d) {
   if (d <= 0) return 0;
   const v = Math.min(d, o.hp) + (d >= o.hp ? 25 : 0);
-  return o.team === G.team ? -v * (o === G.cur ? 2.2 : 1.5) : v;
+  return !foes(o.team, G.team) ? -v * (o === G.cur ? 2.2 : 1.5) : v;
 }
 function blastScore(x, y, r, dmg, chain) {
   let s = 0;
@@ -1575,7 +1625,7 @@ function blastScore(x, y, r, dmg, chain) {
 }
 function nearEnemy(x, y) {
   let best = Infinity;
-  G.worms.forEach((o) => { if (o.alive && o.team !== G.team) best = Math.min(best, Math.hypot(o.x - x, o.y - y)); });
+  G.worms.forEach((o) => { if (o.alive && foes(o.team, G.team)) best = Math.min(best, Math.hypot(o.x - x, o.y - y)); });
   return best;
 }
 // the shotgun ray from shootRay, without effects
@@ -1625,7 +1675,7 @@ function aiTick(w) {
     ai.cands = []; ai.step = 0;
     if ((!best || best.s < 1) && ai.walks < 2) {
       // nothing worth shooting at from here: walk towards the nearest enemy and look again
-      const e = G.worms.filter((o) => o.alive && o.team !== G.team).sort((a, b) => Math.abs(a.x - w.x) - Math.abs(b.x - w.x))[0];
+      const e = G.worms.filter((o) => o.alive && foes(o.team, G.team)).sort((a, b) => Math.abs(a.x - w.x) - Math.abs(b.x - w.x))[0];
       ai.walks++; ai.mode = 'walk'; ai.t = 110; ai.dir = e && e.x < w.x ? -1 : 1; ai.lx = w.x; ai.stuck = 0;
       return;
     }
@@ -2962,6 +3012,21 @@ document.querySelectorAll('#per button').forEach((b) => b.addEventListener('clic
 function setTeamCount(n) {
   document.querySelectorAll('#teams button').forEach((x) => x.classList.toggle('on', +x.dataset.n === n));
   for (let i = 0; i < 4; i++) $('row' + i).hidden = i >= n;
+  updateAllyUi();
+}
+// team mode needs at least three players
+function updateAllyUi() {
+  const n = teamCount(), on = document.querySelector('#allymode .on'), teams = n >= 3 && on && on.dataset.m === 'teams';
+  $('allyblock').hidden = n < 3;
+  $('allyhint').hidden = !teams;
+  for (let i = 0; i < 4; i++) $('ally' + i).hidden = !teams;
+  $('setupmsg').hidden = true;
+}
+function setAlly(i, a) {
+  const b = $('ally' + i);
+  b.dataset.a = String(a); b.textContent = 'AB'[a];
+  b.setAttribute('aria-label', 'Spieler ' + (i + 1) + ': Team ' + 'AB'[a]);
+  $('setupmsg').hidden = true;
 }
 function setWho(i, cpu) {
   const b = $('who' + i), t = cpu ? 'Computer' : 'Mensch';
@@ -2971,6 +3036,8 @@ function setWho(i, cpu) {
 }
 document.querySelectorAll('#teams button').forEach((b) => b.addEventListener('click', () => setTeamCount(+b.dataset.n)));
 for (let i = 0; i < 4; i++) $('who' + i).addEventListener('click', () => setWho(i, $('who' + i).dataset.cpu !== '1'));
+for (let i = 0; i < 4; i++) $('ally' + i).addEventListener('click', () => setAlly(i, $('ally' + i).dataset.a === '1' ? 0 : 1));
+document.querySelectorAll('#allymode button').forEach((b) => b.addEventListener('click', () => { segPick('allymode', b); updateAllyUi(); }));
 $('sound').addEventListener('click', () => setMuted(!muted));
 function setSpeechRate(v) {
   speechRate = clamp(+v || 1.9, 0.8, 2.2);
@@ -3024,6 +3091,10 @@ try {
   const st = JSON.parse(localStorage.getItem('wurm-setup') || 'null');
   if (st && [2, 3, 4].indexOf(st.n) >= 0) setTeamCount(st.n);
   if (st && Array.isArray(st.cpu)) st.cpu.forEach((c, i) => { if (i < 4) setWho(i, !!c); });
+  if (st && Array.isArray(st.ally)) st.ally.forEach((a, i) => { if (i < 4 && (a === 0 || a === 1)) setAlly(i, a); });
+  const mb = st && st.mode && document.querySelector('#allymode [data-m="' + st.mode + '"]');
+  if (mb) segPick('allymode', mb);
+  updateAllyUi();
   const tb = st && document.querySelector('#ttime [data-t="' + (+st.time || 0) + '"]');
   if (tb) segPick('ttime', tb);
   const lb = st && document.querySelector('#land [data-land="' + st.land + '"]');

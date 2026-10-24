@@ -75,10 +75,10 @@ button,input{font:inherit;color:inherit}
 .wsel .wname{display:flex;gap:8px;align-items:center;min-width:0}
 .wsel .wammo{font-variant-numeric:tabular-nums;color:var(--muted);font-weight:700}
 .wgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.wcard{position:relative;display:grid;gap:2px;text-align:left;align-content:start;padding:10px 12px;min-height:64px;min-width:0;border-radius:12px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
-.wcard b{font-size:16px;padding-right:34px}
+.wcard{position:relative;display:grid;gap:2px;text-align:left;align-content:start;padding:10px;min-height:64px;min-width:0;border-radius:12px;border:1px solid var(--line);background:var(--bg);cursor:pointer}
+.wcard b{font-size:15px;padding-right:26px;overflow-wrap:anywhere}
 .wcard span{font-size:12px;color:var(--muted);line-height:1.25}
-.wcard i{position:absolute;top:10px;right:12px;font-style:normal;font-weight:700;font-variant-numeric:tabular-nums}
+.wcard i{position:absolute;top:10px;right:10px;font-style:normal;font-weight:700;font-variant-numeric:tabular-nums}
 .wcard.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
 .wcard[disabled]{opacity:.38;cursor:default}
 .wcard:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
@@ -221,8 +221,10 @@ const WEAPONS = [
   { id: 'dyn', n: 'Dynamit', d: 'Legen, 4 s Zündzeit', k: 'tap', r: 62, dmg: 80, ammo: 2, b: 'Legen', h: 'Antippen' },
   { id: 'min', n: 'Mine', d: 'Zündet, wenn jemand naht', k: 'tap', r: 38, dmg: 50, ammo: 2, b: 'Legen', h: 'Antippen' },
   { id: 'she', n: 'Sprengschaf', d: 'Läuft los, Feuer sprengt', k: 'tap', r: 46, dmg: 60, ammo: 1, b: 'Loslassen', h: 'Erneut tippen: Boom' },
+  { id: 'kam', n: 'Kamikaze', d: 'Wurm fliegt los und opfert sich', k: 'tap', r: 50, dmg: 70, ammo: 1, b: 'Los', h: 'Zielen, antippen' },
   { id: 'air', n: 'Luftschlag', d: 'Ziel auf der Karte antippen', k: 'target', r: 28, dmg: 32, ammo: 1, b: 'Abwurf', h: 'Ziel antippen' },
-  { id: 'tel', n: 'Teleport', d: 'Ziel antippen, Zug geht weiter', k: 'target', ammo: 1, b: 'Teleport', h: 'Ziel antippen' }
+  { id: 'tel', n: 'Teleport', d: 'Ziel antippen, Zug geht weiter', k: 'target', ammo: 1, b: 'Teleport', h: 'Ziel antippen' },
+  { id: 'rop', n: 'Ninja-Seil', d: 'Schwingen, Feuer löst das Seil', k: 'tap', ammo: 5, b: 'Seil', h: 'Zielen, antippen' }
 ];
 const WI = {};
 WEAPONS.forEach((w, i) => { WI[w.id] = i; });
@@ -347,7 +349,8 @@ function land(w) {
   w.vy = 0; w.ground = true;
 }
 function stepWorm(w) {
-  if (!w.alive) return;
+  if (!w.alive || w.kami) return;
+  if (w.rope) { stepRope(w); return; }
   let vx = w.vx;
   if (w.ground) {
     if (w.walk) vx = w.walk * 0.62;
@@ -431,7 +434,7 @@ function explode(x, y, r, dmg) {
       const f = 1 - d / reach, l = d || 1;
       hurt(w, Math.round(dmg * f));
       w.vx += dx / l * f * 8; w.vy += dy / l * f * 6 - 3 * f;
-      w.ground = false; w.y -= 1; w.fx = 0;
+      w.ground = false; w.y -= 1; w.fx = 0; w.rope = null;
     }
   });
   G.barrels.forEach((b) => {
@@ -511,6 +514,7 @@ function stepProj(p) {
   p.age++;
   if (p.kind === 'rocket' || p.kind === 'bomb') return stepFlyer(p);
   if (p.kind === 'nade') return stepNade(p);
+  if (p.kind === 'kami') return stepKami(p);
   return stepSheep(p);
 }
 function reap() {
@@ -561,7 +565,7 @@ function stepBarrels() {
     }
   }
 }
-const CRATE_ITEMS = ['clu', 'sho', 'dyn', 'min', 'she', 'air', 'tel', 'bat'];
+const CRATE_ITEMS = ['clu', 'sho', 'dyn', 'min', 'she', 'air', 'tel', 'bat', 'kam', 'rop'];
 function collect(c, w) {
   if (c.type === 'hp') {
     const add = Math.max(0, Math.min(35, 150 - w.hp));
@@ -594,7 +598,7 @@ function spawnCrate() {
   let x = Math.floor(rnd(60, W - 60)), tries = 0;
   while (surfaceY(x) > WATERY - 30 && tries++ < 40) x = Math.floor(rnd(60, W - 60));
   const item = CRATE_ITEMS[Math.floor(Math.random() * CRATE_ITEMS.length)];
-  G.crates.push({ x: x, y: -30, vy: 0, age: 0, chute: true, type: Math.random() < 0.45 ? 'hp' : 'wpn', item: item, n: (item === 'sho' || item === 'min') ? 2 : 1 });
+  G.crates.push({ x: x, y: -30, vy: 0, age: 0, chute: true, type: Math.random() < 0.45 ? 'hp' : 'wpn', item: item, n: (item === 'sho' || item === 'min' || item === 'rop') ? 2 : 1 });
   return true;
 }
 function placeHazards() {
@@ -669,10 +673,84 @@ function teleport(tx, ty) {
   return true;
 }
 
+/* ---------- ninja rope and kamikaze ---------- */
+function ropeRelease(w) {
+  w = w || G.cur;
+  if (w && w.rope) { w.rope = null; w.ground = false; }
+}
+// returns the anchor the rope would catch, or null when nothing is in reach
+function ropeShot() {
+  const w = G.cur, a = G.aim * Math.PI / 180, dx = w.face * Math.cos(a), dy = -Math.sin(a);
+  let x = w.x, y = w.y - 4;
+  for (let i = 0; i < 140; i++) {
+    const px = x, py = y;
+    x += dx * 2; y += dy * 2;
+    if (x < 0 || x > W || y < -200) return null;
+    if (solid(x, y)) return { ax: px, ay: py, sx: x, sy: y };
+  }
+  return null;
+}
+// the worm swings on a fixed-length rope: gravity, a sideways push and a taut-rope constraint
+function stepRope(w) {
+  const r = w.rope;
+  if (!solid(r.sx, r.sy)) { w.rope = null; w.ground = false; return; }
+  w.ground = false;
+  w.vy = Math.min(10, w.vy + 0.22);
+  if (w === G.cur && w.walk) w.vx += w.walk * 0.08;
+  w.vx *= 0.996;
+  // like bodyHit, plus the row just above the feet so the worm cannot sink into the ground
+  const hit = (x, y) => bodyHit(x, y) || solid(x - 4, y + R - 1) || solid(x, y + R - 1) || solid(x + 4, y + R - 1);
+  const nx = w.x + w.vx, ny = w.y + w.vy;
+  if (!hit(nx, ny)) { w.x = nx; w.y = ny; }
+  else {
+    // like walking: step over small bumps of up to 4 px, otherwise stop against the wall
+    let moved = false;
+    for (let up = 0; up <= 4 && !moved; up++) {
+      if (!hit(nx, w.y - up)) { w.x = nx; w.y -= up; if (w.vy > 0) w.vy = 0; moved = true; }
+    }
+    if (!moved) {
+      if (!hit(w.x, ny)) { w.y = ny; w.vx *= 0.3; }
+      else { w.vx *= -0.3; w.vy *= -0.3; }
+    }
+  }
+  const dx = w.x - r.ax, dy = w.y - r.ay, d = Math.hypot(dx, dy) || 1;
+  if (d > r.len) {
+    const ux = dx / d, uy = dy / d, px = r.ax + ux * r.len, py = r.ay + uy * r.len;
+    if (!hit(px, py)) { w.x = px; w.y = py; }
+    const vn = w.vx * ux + w.vy * uy;
+    if (vn > 0) { w.vx -= vn * ux; w.vy -= vn * uy; }
+  }
+  w.x = clamp(w.x, R, W - R);
+}
+function kamiBoom(p) {
+  const w = p.worm;
+  explode(p.x, p.y, p.r, p.dmg);
+  w.kami = false; w.hp = 0;
+  return true;
+}
+// the worm itself is the projectile; it blows up on impact or at the end of its flight
+function stepKami(p) {
+  const w = p.worm;
+  p.vy += 0.03;
+  for (let i = 0; i < 3; i++) {
+    p.x += p.vx / 3; p.y += p.vy / 3;
+    w.x = p.x; w.y = p.y;
+    const l = Math.hypot(p.vx, p.vy) || 1;
+    const hitWorm = G.worms.some((o) => o.alive && o !== w && Math.hypot(o.x - p.x, o.y - p.y) < R * 2 - 2);
+    if (hitWorm || solid(p.x, p.y) || solid(p.x + p.vx / l * 6, p.y + p.vy / l * 6)) return kamiBoom(p);
+  }
+  w.face = p.vx >= 0 ? 1 : -1;
+  if (p.age % 2 === 0) G.parts.push({ x: p.x - p.vx * 2, y: p.y - p.vy * 2, vx: 0, vy: 0, life: 0, max: 16, type: 'fire', r: 3.5, col: '#ffb23d' });
+  if (p.y > WATERY) { splash(p.x); w.kami = false; w.y = WATERY + 8; return true; }
+  if (p.age > 70 || p.x < -20 || p.x > W + 20) return kamiBoom(p);
+  return false;
+}
+
 /* ---------- turns ---------- */
 let lastSig = '';
 function setPhase(p) {
   G.phase = p;
+  if (p === 'resolve' || p === 'handoff' || p === 'over') G.worms.forEach((w) => { w.rope = null; });
   $('controls').dataset.off = (p === 'aim' || p === 'retreat') ? '0' : '1';
 }
 function toast(msg) {
@@ -709,10 +787,11 @@ const ammoText = (n) => (n === INF ? '∞' : '×' + n);
 function updateWeapons() {
   const A = G.team >= 0 ? G.ammo[G.team] : null;
   let wp = WEAPONS[G.weapon];
-  if (A && A[wp.id] <= 0 && !(wp.id === 'sho' && G.shotsLeft > 0)) { G.weapon = 0; wp = WEAPONS[0]; }
+  if (A && A[wp.id] <= 0 && !(wp.id === 'sho' && G.shotsLeft > 0) && !(wp.id === 'rop' && G.ropeTurn)) { G.weapon = 0; wp = WEAPONS[0]; }
   if (A) { $('wname').textContent = wp.n; $('wammo').textContent = ammoText(A[wp.id]); }
-  $('firetxt').textContent = wp.b;
-  $('firehint').textContent = wp.id === 'sho' && G.shotsLeft > 0 ? 'Noch ' + G.shotsLeft + ' Schuss' : wp.h;
+  const hanging = wp.id === 'rop' && G.cur && G.cur.rope;
+  $('firetxt').textContent = hanging ? 'Loslassen' : wp.b;
+  $('firehint').textContent = hanging ? 'Oder Sprung' : wp.id === 'sho' && G.shotsLeft > 0 ? 'Noch ' + G.shotsLeft + ' Schuss' : wp.h;
   $('wgrid').innerHTML = WEAPONS.map((w, i) => {
     const n = A ? A[w.id] : w.ammo;
     return '<button type="button" class="wcard' + (i === G.weapon ? ' on' : '') + '" data-i="' + i + '"' + (n <= 0 ? ' disabled' : '') +
@@ -749,7 +828,7 @@ function beginTurn() {
   G.team = t; G.cur = pickWorm(t);
   G.wind = Math.round(rnd(-10, 10));
   G.power = 0; G.charging = false; setPower(0);
-  G.shotsLeft = 0; G.cool = 0; G.target = null; G.free = false; G.userScale = null; setOverview(false);
+  G.shotsLeft = 0; G.cool = 0; G.target = null; G.free = false; G.userScale = null; G.ropeTurn = false; setOverview(false);
   G.cur.walk = 0; G.cam.x = G.cur.x; G.cam.y = G.cur.y;
   updateWeapons(); setWindUi();
   $('sheet').hidden = true;
@@ -807,11 +886,26 @@ function fire() {
   const w = G.cur;
   if (!w || G.phase !== 'aim' || G.cool > 0) return;
   const wp = WEAPONS[G.weapon], id = wp.id, A = G.ammo[G.team];
-  if (A[id] <= 0 && !(id === 'sho' && G.shotsLeft > 0)) return;
+  if (A[id] <= 0 && !(id === 'sho' && G.shotsLeft > 0) && !(id === 'rop' && G.ropeTurn)) return;
+  if (w.rope && id !== 'rop') ropeRelease(w);
   const a = G.aim * Math.PI / 180, dx = w.face * Math.cos(a), dy = -Math.sin(a), pw = Math.max(0.12, G.power);
   const sx = w.x + dx * 12, sy = w.y - 2 + dy * 12;
   let ends = true;
-  if (id === 'baz') {
+  if (id === 'rop') {
+    ends = false;
+    if (w.rope) { ropeRelease(w); G.cool = 8; }
+    else {
+      const hit = ropeShot();
+      if (!hit) { toast('Kein Halt in Reichweite'); return; }
+      if (!G.ropeTurn) { consume(id); G.ropeTurn = true; }
+      w.rope = { ax: hit.ax, ay: hit.ay, sx: hit.sx, sy: hit.sy, len: Math.max(24, Math.hypot(hit.ax - w.x, hit.ay - w.y)) };
+      w.ground = false; w.y -= 2; G.cool = 8;
+    }
+  } else if (id === 'kam') {
+    consume(id);
+    w.kami = true; w.vx = 0; w.vy = 0; w.fx = 0; w.ground = false; w.y -= 3;
+    G.proj.push({ kind: 'kami', sprite: 'kami', worm: w, x: w.x, y: w.y, vx: dx * 4.2, vy: dy * 4.2, age: 0, r: wp.r, dmg: wp.dmg, owner: w });
+  } else if (id === 'baz') {
     consume(id);
     G.proj.push({ kind: 'rocket', sprite: 'rocket', x: sx, y: sy, vx: dx * (2 + pw * 10), vy: dy * (2 + pw * 10), age: 0, r: wp.r, dmg: wp.dmg, owner: w });
   } else if (id === 'gre' || id === 'clu') {
@@ -855,7 +949,9 @@ function fire() {
 }
 function jump() {
   const w = G.cur;
-  if (!playing() || !w || !w.alive || !w.ground) return;
+  if (!playing() || !w || !w.alive) return;
+  if (w.rope) { ropeRelease(w); w.vy -= 2.2; updateWeapons(); return; }
+  if (!w.ground) return;
   w.vy = -4.6; w.vx = w.face * 1.3; w.ground = false; w.y -= 1;
 }
 function pressFire() {
@@ -883,8 +979,13 @@ function tick() {
     cur.walk = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
     if (cur.walk) cur.face = cur.walk;
     if (G.phase === 'aim') {
-      if (keys.up) G.aim = Math.min(85, G.aim + 0.9);
-      if (keys.down) G.aim = Math.max(-45, G.aim - 0.9);
+      if (cur.rope) {
+        if (keys.up) cur.rope.len = Math.max(20, cur.rope.len - 1.6);
+        if (keys.down) cur.rope.len = Math.min(280, cur.rope.len + 1.6);
+      } else {
+        if (keys.up) G.aim = Math.min(85, G.aim + 0.9);
+        if (keys.down) G.aim = Math.max(-45, G.aim - 0.9);
+      }
       if (G.charging) { G.power = Math.min(1, G.power + 0.013); setPower(G.power); if (G.power >= 1) fire(); }
       G.timeLeft--;
       if (G.timeLeft <= 0) { G.charging = false; G.power = 0; setPower(0); toast('Zeit abgelaufen'); setPhase('resolve'); G.settle = 0; }
@@ -963,13 +1064,13 @@ function tag(x, y, text, col, active) {
   ctx.fillText(text, x, y + 0.5);
   return th;
 }
-const aimable = () => { const k = WEAPONS[G.weapon]; return k.k === 'charge' || k.id === 'sho' || k.id === 'bat'; };
+const aimable = () => { const k = WEAPONS[G.weapon]; return k.k === 'charge' || k.id === 'sho' || k.id === 'bat' || k.id === 'kam' || k.id === 'rop'; };
 function drawWorm(w) {
   const c = COL[w.team], f = w.face;
   ctx.save(); ctx.translate(w.x, w.y);
   ctx.beginPath(); ctx.arc(-f * 5, 3.5, 5.5, 0, 6.283); ctx.fillStyle = c; ctx.fill();
   ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fill();
-  const act = w === G.cur && G.phase === 'aim' && aimable();
+  const act = w === G.cur && G.phase === 'aim' && aimable() && !w.rope;
   if (act) {
     const a = G.aim * Math.PI / 180, dx = f * Math.cos(a), dy = -Math.sin(a);
     ctx.strokeStyle = '#2a2018'; ctx.lineWidth = 4; ctx.lineCap = 'round';
@@ -1074,6 +1175,14 @@ function drawCrate(c) {
   ctx.strokeStyle = '#2a2018'; ctx.lineWidth = 1.4; ctx.strokeRect(-8, -8, 16, 16);
   ctx.restore();
 }
+function drawRope(w) {
+  const r = w.rope;
+  ctx.save();
+  ctx.strokeStyle = '#efe3c4'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(r.ax, r.ay); ctx.lineTo(w.x, w.y - 3); ctx.stroke();
+  ctx.fillStyle = '#4a3f33'; ctx.beginPath(); ctx.arc(r.ax, r.ay, 3, 0, 6.283); ctx.fill();
+  ctx.restore();
+}
 function drawTarget() {
   const t = G.target;
   if (!t || G.phase !== 'aim' || WEAPONS[G.weapon].k !== 'target') return;
@@ -1129,6 +1238,7 @@ function draw() {
   G.barrels.forEach(drawBarrel);
   G.mines.forEach(drawMine);
   G.crates.forEach(drawCrate);
+  G.worms.forEach((w) => { if (w.alive && w.rope) drawRope(w); });
   G.worms.forEach((w) => { if (w.alive && w !== G.cur) drawWorm(w); });
   if (G.cur && G.cur.alive) drawWorm(G.cur);
   G.proj.forEach(drawProj);

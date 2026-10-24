@@ -371,7 +371,7 @@ const G = {
   cam: { x: W / 2, y: H / 2 }, shake: 0, t: 0, settle: 0, per: 3, wptr: [0, 0, 0], ammo: [{}, {}, {}], overview: false,
   free: false, userScale: null, target: null, shotsLeft: 0, cool: 0, mines: [], barrels: [], crates: [],
   mode: 'ffa', ally: null, aptr: {}, turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
-  bubbles: [], sayQ: [], clouds: [], amb: [], sayCd: 0, graves: [], turnDmg: 0, fired: false
+  bubbles: [], sayQ: [], clouds: [], amb: [], planes: [], sayCd: 0, graves: [], turnDmg: 0, fired: false
 };
 const keys = { left: false, right: false, up: false, down: false };
 let terrain, tctx, mask, hs;
@@ -1091,16 +1091,38 @@ function stepCrates() {
     if (w) { collect(c, w); G.crates.splice(i, 1); }
   }
 }
+// a propeller plane crosses the sky and drops the crate on its parachute
 function spawnCrate() {
-  if (G.crates.length >= 3) return false;
+  if (G.crates.length + G.planes.length >= 3) return false;
   let x = Math.floor(rnd(60, W - 60)), tries = 0;
   while (surfaceY(x) > WATERY - 30 && tries++ < 40) x = Math.floor(rnd(60, W - 60));
   const item = CRATE_ITEMS[Math.floor(Math.random() * CRATE_ITEMS.length)];
-  G.crates.push({ x: x, y: -30, vy: 0, age: 0, chute: true, type: Math.random() < 0.45 ? 'hp' : 'wpn', item: item, n: (item === 'sho' || item === 'min' || item === 'rop') ? 2 : 1 });
+  const crate = { x: x, y: 0, vy: 0, age: 0, chute: true, type: Math.random() < 0.45 ? 'hp' : 'wpn', item: item, n: (item === 'sho' || item === 'min' || item === 'rop') ? 2 : 1 };
+  // fly just above the highest point of the landscape
+  let top = H;
+  for (let sx = 0; sx < W; sx += 16) top = Math.min(top, surfaceY(sx));
+  const dir = Math.random() < 0.5 ? 1 : -1, y = clamp(top - 75, 25, 130);
+  G.planes.push({ x: dir > 0 ? -90 : W + 90, y: y, dir: dir, crate: crate, t: 0 });
+  sfx('plane', (W + 180) / 2.6 / 60, dir);
   return true;
 }
+function stepPlanes() {
+  for (let i = G.planes.length - 1; i >= 0; i--) {
+    const p = G.planes[i];
+    p.t++;
+    p.x += p.dir * 2.6;
+    p.y += Math.sin(p.t * 0.05) * 0.15;
+    if (p.crate && (p.dir > 0 ? p.x >= p.crate.x : p.x <= p.crate.x)) {
+      p.crate.x = p.x - p.dir * 7; p.crate.y = p.y + 22;
+      G.crates.push(p.crate);
+      p.crate = null;
+      sfx('drop', 0, p.x);
+    }
+    if (p.x < -120 || p.x > W + 120) G.planes.splice(i, 1);
+  }
+}
 function placeHazards() {
-  G.mines = []; G.barrels = []; G.crates = [];
+  G.mines = []; G.barrels = []; G.crates = []; G.planes = [];
   const used = G.worms.map((w) => w.x);
   const spot = () => {
     for (let t = 0; t < 400; t++) {
@@ -1802,6 +1824,27 @@ function sfx(kind, size, x) {
     } else if (kind === 'turn') {
       [[659, 0], [988, 0.14]].forEach((n) => { tone(a, master, 'sine', n[0], n[0], 0.11, 0.005, 0.55, n[1]); tone(a, master, 'sine', n[0] * 3, n[0] * 3, 0.015, 0.003, 0.15, n[1]); });
     } else if (kind === 'tick') tone(a, master, 'sine', 1250, 1250, 0.18, 0.002, 0.05);
+    else if (kind === 'plane') {
+      // propeller drone: two detuned saws, chopped by the propeller, sweeping across the stereo field
+      const dur = size, dir = x, t = a.currentTime, g = a.createGain(), lp = a.createBiquadFilter(), chop = a.createGain(), lfo = a.createOscillator(), lg = a.createGain();
+      lp.type = 'lowpass'; lp.frequency.value = 650;
+      lfo.frequency.value = 24; lg.gain.value = 0.45; chop.gain.value = 0.55;
+      lfo.connect(lg); lg.connect(chop.gain);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + dur * 0.35);
+      g.gain.setValueAtTime(0.16, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      let dest = master;
+      if (a.createStereoPanner) {
+        const pn = a.createStereoPanner();
+        pn.pan.setValueAtTime(-0.8 * dir, t); pn.pan.linearRampToValueAtTime(0.8 * dir, t + dur);
+        pn.connect(master); dest = pn;
+      }
+      lp.connect(chop); chop.connect(g); g.connect(dest);
+      [88, 90.5].forEach((f) => { const o = a.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.connect(lp); o.start(t); o.stop(t + dur + 0.05); });
+      lfo.start(t); lfo.stop(t + dur + 0.05);
+    } else if (kind === 'drop') {
+      tone(a, out, 'sine', 900, 500, 0.12, 0.004, 0.12);
+      noiseHit(a, out, 'bandpass', 1400, 2600, 1.2, 0.18, 0.08, 0.3, 0.05);
+    }
   } catch (e) { /* sound is optional */ }
 }
 // a small formant synthesiser: German text -> sounds -> one voice that glides from sound to sound
@@ -2265,7 +2308,7 @@ function tick() {
   }
   G.worms.forEach(stepWorm);
   for (let i = G.proj.length - 1; i >= 0; i--) if (stepProj(G.proj[i])) G.proj.splice(i, 1);
-  stepMines(); stepBarrels(); stepCrates(); stepGraves();
+  stepMines(); stepBarrels(); stepCrates(); stepPlanes(); stepGraves();
   stepParts();
   stepAmbient();
   reap();
@@ -2749,6 +2792,50 @@ function drawMine(m) {
   ctx.fillStyle = lit ? '#ff4d2e' : '#7a2a20'; ctx.beginPath(); ctx.arc(0, -2, 1.7, 0, 6.283); ctx.fill();
   ctx.restore();
 }
+// a little red propeller plane with a worm pilot
+function drawPlane(p) {
+  ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.dir * 1.5, 1.5); ctx.rotate(Math.sin(p.t * 0.05) * 0.03);
+  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+  const line = 'rgba(40,20,20,.55)';
+  // tail fin and stabiliser
+  ctx.fillStyle = '#c9362a'; ctx.strokeStyle = line; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-22, -2); ctx.lineTo(-29, -14); ctx.lineTo(-23, -14); ctx.lineTo(-15, -3); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // far wing
+  ctx.fillStyle = '#e8d9b5'; ctx.beginPath(); ctx.ellipse(1, -3, 12, 2.6, -0.08, 0, 6.283); ctx.fill(); ctx.stroke();
+  // fuselage
+  ctx.fillStyle = '#e04a3a';
+  ctx.beginPath(); ctx.moveTo(-27, -3); ctx.quadraticCurveTo(-10, -9, 10, -7); ctx.quadraticCurveTo(19, -6, 19, 0);
+  ctx.quadraticCurveTo(19, 6, 10, 6); ctx.quadraticCurveTo(-10, 6, -27, 1); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.beginPath(); ctx.ellipse(0, -4, 12, 1.6, -0.05, 0, 6.283); ctx.fill();
+  ctx.fillStyle = '#f4f1ea'; ctx.fillRect(-12, -6.5, 3, 12.4);
+  // cockpit with the pilot: a tiny pink worm in goggles
+  ctx.fillStyle = '#f6a5b0'; ctx.beginPath(); ctx.arc(2, -9, 4, 0, 6.283); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#5a3a26'; ctx.fillRect(-1.5, -12.5, 7, 2);
+  ctx.fillStyle = '#9fdcff'; ctx.beginPath(); ctx.arc(4.5, -10, 1.6, 0, 6.283); ctx.fill();
+  ctx.fillStyle = 'rgba(160,220,255,.55)'; ctx.strokeStyle = line;
+  ctx.beginPath(); ctx.moveTo(-3, -7); ctx.quadraticCurveTo(0, -14.5, 8, -7.5); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // scarf fluttering behind the pilot
+  ctx.strokeStyle = '#ffd23f'; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.moveTo(-1, -7.5); ctx.quadraticCurveTo(-6, -9 + Math.sin(p.t * 0.4) * 1.5, -10, -8 + Math.sin(p.t * 0.4 + 1) * 2); ctx.stroke();
+  // near wing
+  ctx.fillStyle = '#f4e6c2'; ctx.strokeStyle = line; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.ellipse(-1, 2, 13, 3, 0.1, 0, 6.283); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = '#c9362a'; ctx.beginPath(); ctx.arc(-8, 2.4, 1.6, 0, 6.283); ctx.fill();
+  // nose and spinning propeller
+  ctx.fillStyle = '#3b3631'; ctx.beginPath(); ctx.ellipse(20, 0, 2.4, 3, 0, 0, 6.283); ctx.fill();
+  ctx.fillStyle = 'rgba(70,60,55,.35)'; ctx.beginPath(); ctx.ellipse(21.5, 0, 1.8, 10, 0, 0, 6.283); ctx.fill();
+  const blade = Math.cos(p.t * 0.9) * 9;
+  ctx.strokeStyle = '#3b3631'; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(21.5, -blade); ctx.lineTo(21.5, blade); ctx.stroke();
+  // wheels
+  ctx.strokeStyle = line; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(6, 5); ctx.lineTo(7, 10); ctx.stroke();
+  ctx.fillStyle = '#2b2730'; ctx.beginPath(); ctx.arc(7, 10.5, 2.2, 0, 6.283); ctx.fill();
+  // the crate hangs under the plane until it is dropped
+  if (p.crate) {
+    ctx.fillStyle = p.crate.type === 'hp' ? '#f4f1ea' : '#b9823f'; ctx.fillRect(-9, 7, 9, 8);
+    ctx.strokeStyle = '#2a2018'; ctx.strokeRect(-9, 7, 9, 8);
+  }
+  ctx.restore();
+}
 function drawCrate(c) {
   ctx.save(); ctx.translate(c.x, c.y);
   if (c.chute) {
@@ -2847,6 +2934,7 @@ function draw() {
   G.barrels.forEach(drawBarrel);
   G.mines.forEach(drawMine);
   G.crates.forEach(drawCrate);
+  G.planes.forEach(drawPlane);
   G.graves.forEach(drawGrave);
   G.worms.forEach((w) => { if (w.alive && w.rope) drawRope(w); });
   G.worms.forEach((w) => { if (w.alive && w !== G.cur) drawWorm(w); });

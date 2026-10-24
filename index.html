@@ -818,6 +818,7 @@ function explode(x, y, r, dmg) {
   carve(x, y, r);
   sfx('boom', r, x);
   G.shake = Math.max(G.shake, Math.min(10, r / 6));
+  G.focus = { x: x, y: y, t: 110 }; // the camera stays on the blast for a moment
   G.parts.push({ x: x, y: y, vx: 0, vy: 0, life: 0, max: 10, type: 'flash', r: r });
   puff(x, y, 'fire', 18, r / 9, '#ffb23d');
   puff(x, y, 'smoke', 10, r / 18, '#5d554a');
@@ -1247,7 +1248,7 @@ function beginTurn() {
   G.wind = Math.round(rnd(-10, 10));
   G.power = 0; G.charging = false; setPower(0);
   G.shotsLeft = 0; G.cool = 0; G.target = null; G.free = false; G.userScale = null; G.ropeTurn = false; setOverview(false);
-  G.cur.walk = 0; G.cam.x = G.cur.x; G.cam.y = G.cur.y;
+  G.cur.walk = 0; G.cam.x = G.cur.x; G.cam.y = G.cur.y; G.focus = null;
   updateWeapons(); setWindUi();
   $('sheet').hidden = true;
   $('handcard').style.setProperty('--c', COL[t]);
@@ -1698,13 +1699,13 @@ function voice(w, kind, txt) {
       syllable(a, out, base * 1.6, base * 0.75, VOWELS[0], 0, kind === 'die' ? 0.8 : 0.5, true, 1.6);
       voiceUntil = a.currentTime + 0.6;
     } else if (kind === 'hurt') {
-      syllable(a, out, base * 1.4, base * 0.9, VOWELS[0], 0, 0.12, false, 1.5);
-      syllable(a, out, base * 1.1, base * 0.8, VOWELS[4], 0.12, 0.14, false, 1.4);
-      voiceUntil = a.currentTime + 0.3;
+      syllable(a, out, base * 1.4, base * 0.9, VOWELS[0], 0, 0.2, false, 1.5);
+      syllable(a, out, base * 1.1, base * 0.8, VOWELS[4], 0.2, 0.24, false, 1.4);
+      voiceUntil = a.currentTime + 0.5;
     } else {
-      const n = clamp(Math.round(txt.length / 6), 2, 6);
-      for (let i = 0; i < n; i++) { const f = base * rnd(0.85, 1.3); syllable(a, out, f, f * rnd(0.8, 1.15), pick(VOWELS), i * 0.11, 0.085, false, 1.4); }
-      voiceUntil = a.currentTime + n * 0.11 + 0.1;
+      const n = clamp(Math.round(txt.length / 7), 2, 5);
+      for (let i = 0; i < n; i++) { const f = base * rnd(0.85, 1.3); syllable(a, out, f, f * rnd(0.8, 1.15), pick(VOWELS), i * 0.19, 0.16, false, 1.4); }
+      voiceUntil = a.currentTime + n * 0.19 + 0.1;
     }
   } catch (e) { /* sound is optional */ }
 }
@@ -2032,7 +2033,8 @@ function tick() {
   if (playing() && cur && !cur.alive) { G.charging = false; G.power = 0; setPower(0); setPhase('resolve'); G.settle = 0; }
   if (G.phase === 'resolve') {
     const busy = G.proj.length > 0 || G.worms.some((w) => w.alive && (!w.ground || Math.abs(w.vx) > 0.15)) ||
-      G.mines.some((m) => m.fuse != null || m.vy > 0) || G.barrels.some((b) => b.fuse != null || b.vy > 0);
+      G.mines.some((m) => m.fuse != null || m.vy > 0) || G.barrels.some((b) => b.fuse != null || b.vy > 0) ||
+      (G.focus && G.focus.t > 40);
     G.settle = busy ? 0 : G.settle + 1;
     if (G.settle === 2 && G.fired && G.turnDmg === 0 && cur && cur.alive) say(cur, 'miss', { chance: 0.8 });
     if (G.settle > (G.bubbles.length ? 90 : 50)) beginTurn();
@@ -2054,6 +2056,7 @@ function tick() {
 }
 const CAMT = -400, CAMB = H + 260;
 function updateCam() {
+  if (G.focus && G.focus.t > 0) G.focus.t--;
   const goal = G.overview ? fitScale : (G.userScale || baseScale);
   scale += (goal - scale) * 0.18;
   if (Math.abs(goal - scale) < 0.0005) scale = goal;
@@ -2061,7 +2064,7 @@ function updateCam() {
   if (G.overview) { tx = W / 2; ty = H / 2; }
   else if (!G.free) {
     const p = G.proj[0];
-    if (p) { tx = p.x; ty = p.y; } else if (G.cur) { tx = G.cur.x; ty = G.cur.y - 24; } else { tx = W / 2; ty = H / 2; }
+    if (p) { tx = p.x; ty = p.y; } else if (G.focus && G.focus.t > 0) { tx = G.focus.x; ty = G.focus.y - 20; } else if (G.cur) { tx = G.cur.x; ty = G.cur.y - 24; } else { tx = W / 2; ty = H / 2; }
   }
   G.cam.x += (tx - G.cam.x) * 0.09; G.cam.y += (ty - G.cam.y) * 0.09;
   const vw = cw / scale, vh = ch / scale;

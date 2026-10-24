@@ -341,7 +341,7 @@ const G = {
   cam: { x: W / 2, y: H / 2 }, shake: 0, t: 0, settle: 0, per: 3, wptr: [0, 0, 0], ammo: [{}, {}, {}], overview: false,
   free: false, userScale: null, target: null, shotsLeft: 0, cool: 0, mines: [], barrels: [], crates: [],
   turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
-  bubbles: [], sayQ: [], sayCd: 0, graves: [], turnDmg: 0, fired: false
+  bubbles: [], sayQ: [], clouds: [], amb: [], sayCd: 0, graves: [], turnDmg: 0, fired: false
 };
 const keys = { left: false, right: false, up: false, down: false };
 let terrain, tctx, mask, hs;
@@ -371,6 +371,15 @@ const THEMES = [
     water: ['rgba(214,74,22,.88)', 'rgba(255,138,40,.8)'], drop: '#ffb347', dirt: '#3b3331' }
 ];
 let theme = THEMES[0];
+// extra looks per landscape: sun, clouds, far mountains, weather, stones and grass tufts
+const FX = {
+  wiese: { sun: '#fff3b8', glow: '255,236,160', cloud: '#ffffff', far: '#cddfd4', weather: 'pollen', stone: '#8a6a50', tuft: ['#5f8f3a', '#86b34e'], flowers: true },
+  wueste: { sun: '#fff6dc', glow: '255,196,120', cloud: '#fff4e6', far: '#f2d4a4', weather: 'dust', stone: '#a8743f', tuft: null },
+  winter: { sun: '#ffffff', glow: '225,238,255', cloud: '#f5f8fc', far: '#e2ebf3', weather: 'snow', stone: '#4f5e6e', tuft: null, sparkle: true },
+  inseln: { sun: '#fff6c8', glow: '255,240,180', cloud: '#ffffff', far: '#b5e2e2', weather: 'none', stone: '#9a7048', tuft: ['#4f9a40', '#73bf55'] },
+  vulkan: { sun: '#ff7a45', glow: '255,96,40', cloud: '#4a3a40', far: '#6b3a3c', weather: 'embers', stone: '#161212', tuft: null, cracks: true }
+};
+const fx = () => FX[theme.id] || FX.wiese;
 const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 function groundHeight(x, ph, k) {
   const sh = theme.shape, e = Math.min(x, W - x);
@@ -416,6 +425,26 @@ function keyPoints() {
 }
 // decoration is painted on the terrain image only, so it gets blown away with the ground but never blocks anything
 function decorate() {
+  const F = fx();
+  // grass tufts, flowers and snow sparkles along the surface; purely visual like the rest of the decoration
+  for (let x = 4; x < W - 4; x += Math.floor(rnd(4, 9))) {
+    const y = hs[x];
+    if (y > WATERY - 4 || Math.abs(hs[x - 3] - hs[x + 3]) > 9) continue;
+    if (F.tuft) {
+      tctx.lineWidth = 1.3; tctx.lineCap = 'round';
+      for (let b = 0; b < 3; b++) {
+        tctx.strokeStyle = F.tuft[b % 2];
+        tctx.beginPath(); tctx.moveTo(x + b * 1.6 - 1.6, y + 2); tctx.quadraticCurveTo(x + b * 1.6 - 1.6, y - 3, x + b * 2.6 - 2.6 + rnd(-1.5, 1.5), y - rnd(4, 9)); tctx.stroke();
+      }
+      if (F.flowers && Math.random() < 0.12) {
+        tctx.fillStyle = pick(['#ffffff', '#ffd23f', '#f15bb5', '#9b8cff']);
+        tctx.beginPath(); tctx.arc(x + 1, y - rnd(5, 8), 1.6, 0, 6.283); tctx.fill();
+      }
+    } else if (F.sparkle && Math.random() < 0.3) {
+      tctx.fillStyle = 'rgba(255,255,255,.9)';
+      tctx.beginPath(); tctx.arc(x, y + rnd(1, 5), rnd(0.6, 1.2), 0, 6.283); tctx.fill();
+    }
+  }
   const kind = theme.deco, n = kind === 'rock' ? 9 : 8, used = [];
   for (let i = 0, tries = 0; i < n && tries < 200; tries++) {
     const x = Math.floor(rnd(150, W - 150)), y = hs[x];
@@ -484,10 +513,32 @@ function genTerrain() {
     tctx.fillStyle = 'rgba(120,60,20,.13)';
     for (let y = H * 0.25; y < H; y += 22) tctx.fillRect(0, y, W, 7);
   }
-  tctx.strokeStyle = theme.edge; tctx.lineWidth = theme.edgeW; tctx.lineJoin = 'round';
-  tctx.beginPath();
-  for (let x = 0; x < W; x += 2) { if (x === 0) tctx.moveTo(x, hs[x] + 2); else tctx.lineTo(x, hs[x] + 2); }
-  tctx.stroke();
+  const F = fx();
+  // stones in the ground, each with a lit top edge
+  for (let i = 0; i < 70; i++) {
+    const x = rnd(0, W), y = rnd(hs[Math.floor(x)] + 30, H), rx = rnd(3, 9), ry = rx * rnd(0.55, 0.8), rot = rnd(-0.5, 0.5);
+    tctx.fillStyle = F.stone; tctx.globalAlpha = 0.55;
+    tctx.beginPath(); tctx.ellipse(x, y, rx, ry, rot, 0, 6.283); tctx.fill();
+    tctx.fillStyle = 'rgba(255,255,255,.35)'; tctx.globalAlpha = 0.5;
+    tctx.beginPath(); tctx.ellipse(x - rx * 0.25, y - ry * 0.35, rx * 0.5, ry * 0.3, rot, 0, 6.283); tctx.fill();
+    tctx.globalAlpha = 1;
+  }
+  if (F.cracks) {
+    // glowing cracks in the volcanic rock
+    tctx.strokeStyle = 'rgba(255,110,40,.45)'; tctx.lineWidth = 1.5;
+    for (let i = 0; i < 26; i++) {
+      let x = rnd(0, W), y = rnd(hs[Math.floor(x)] + 20, H);
+      tctx.beginPath(); tctx.moveTo(x, y);
+      for (let j = 0; j < 5; j++) { x += rnd(-12, 12); y += rnd(4, 14); tctx.lineTo(x, y); }
+      tctx.stroke();
+    }
+  }
+  const surf = (off) => { tctx.beginPath(); for (let x = 0; x < W; x += 2) { if (x === 0) tctx.moveTo(x, hs[x] + off); else tctx.lineTo(x, hs[x] + off); } };
+  // shadow under the top layer gives the ground depth
+  tctx.lineJoin = 'round';
+  tctx.strokeStyle = 'rgba(0,0,0,.16)'; tctx.lineWidth = 18; surf(14); tctx.stroke();
+  tctx.strokeStyle = theme.edge; tctx.lineWidth = theme.edgeW; surf(2); tctx.stroke();
+  tctx.strokeStyle = 'rgba(255,255,255,.3)'; tctx.lineWidth = 1.5; surf(0.5); tctx.stroke();
   tctx.globalCompositeOperation = 'destination-out';
   for (let c = 0; c < 3; c++) {
     let cx = rnd(160, W - 160), cy = hs[Math.floor(cx)] + rnd(90, 140);
@@ -500,6 +551,7 @@ function genTerrain() {
   const d = tctx.getImageData(0, 0, W, H).data;
   for (let i = 0; i < W * H; i++) mask[i] = d[i * 4 + 3] > 128 ? 1 : 0;
   decorate();
+  initAmbient();
 }
 function solid(x, y) {
   x = x | 0; y = y | 0;
@@ -518,8 +570,11 @@ function carve(cx, cy, r) {
   tctx.restore();
   tctx.save();
   tctx.globalCompositeOperation = 'source-atop';
-  tctx.strokeStyle = 'rgba(30,20,12,.55)'; tctx.lineWidth = 4;
-  tctx.beginPath(); tctx.arc(cx, cy, r + 2, 0, 6.283); tctx.stroke();
+  // burnt rim fading into the ground
+  const sc = tctx.createRadialGradient(cx, cy, r, cx, cy, r + 10);
+  sc.addColorStop(0, 'rgba(25,15,10,.7)'); sc.addColorStop(0.35, 'rgba(25,15,10,.35)'); sc.addColorStop(1, 'rgba(25,15,10,0)');
+  tctx.fillStyle = sc;
+  tctx.beginPath(); tctx.arc(cx, cy, r + 10, 0, 6.283); tctx.fill();
   tctx.restore();
   const x0 = Math.max(0, Math.floor(cx - r)), x1 = Math.min(W - 1, Math.ceil(cx + r));
   const y0 = Math.max(0, Math.floor(cy - r)), y1 = Math.min(H - 1, Math.ceil(cy + r));
@@ -801,7 +856,8 @@ function stepWorm(w) {
 function puff(x, y, type, n, spd, col) {
   for (let i = 0; i < n; i++) {
     const a = Math.random() * 6.283, s = Math.random() * spd;
-    G.parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - (type === 'dirt' ? 1.4 : 0), life: 0, max: rnd(20, 46), type: type, r: rnd(2, 5), col: col });
+    G.parts.push({ x: x, y: y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - (type === 'dirt' ? 1.4 : 0), life: 0,
+      max: type === 'smoke' ? rnd(40, 80) : rnd(20, 46), type: type, r: rnd(2, 5), col: col, rot: rnd(0, 6.28) });
   }
 }
 function splash(x) {
@@ -816,7 +872,8 @@ function stepParts() {
     const p = G.parts[i];
     p.life++;
     p.x += p.vx; p.y += p.vy;
-    if (p.type === 'dirt' || p.type === 'splash') p.vy += 0.16;
+    if (p.type === 'dirt' || p.type === 'splash' || p.type === 'spark') p.vy += 0.16;
+    if (p.type === 'dirt') p.rot += p.vx * 0.15;
     if (p.type === 'smoke') { p.vy -= 0.02; p.vx *= 0.97; }
     if (p.life >= p.max) G.parts.splice(i, 1);
   }
@@ -829,9 +886,13 @@ function explode(x, y, r, dmg) {
   G.shake = Math.max(G.shake, Math.min(10, r / 6));
   G.focus = { x: x, y: y, t: 110 }; // the camera stays on the blast for a moment
   G.parts.push({ x: x, y: y, vx: 0, vy: 0, life: 0, max: 10, type: 'flash', r: r });
-  puff(x, y, 'fire', 18, r / 9, '#ffb23d');
-  puff(x, y, 'smoke', 10, r / 18, '#5d554a');
-  puff(x, y, 'dirt', 16, r / 7, theme.dirt);
+  G.parts.push({ x: x, y: y, vx: 0, vy: 0, life: 0, max: 22, type: 'ball', r: r });
+  G.parts.push({ x: x, y: y, vx: 0, vy: 0, life: 0, max: 18, type: 'ring', r: r });
+  puff(x, y, 'fire', 24, r / 9, '#ffb23d');
+  puff(x, y, 'smoke', 14, r / 16, '#4f4840');
+  puff(x, y, 'dirt', 18, r / 6, theme.dirt);
+  puff(x, y, 'dirt', 8, r / 6, theme.soil[0]);
+  puff(x, y, 'spark', 14, r / 5, '#fff1a8');
   G.worms.forEach((w) => {
     if (!w.alive) return;
     const dx = w.x - x, dy = (w.y - 2) - y, d = Math.hypot(dx, dy), reach = r + 12;
@@ -2037,6 +2098,7 @@ function tick() {
   for (let i = G.proj.length - 1; i >= 0; i--) if (stepProj(G.proj[i])) G.proj.splice(i, 1);
   stepMines(); stepBarrels(); stepCrates(); stepGraves();
   stepParts();
+  stepAmbient();
   reap();
   stepMoods();
   if (playing() && cur && !cur.alive) { G.charging = false; G.power = 0; setPower(0); setPhase('resolve'); G.settle = 0; }
@@ -2081,6 +2143,103 @@ function updateCam() {
   G.cam.y = vh >= CAMB - CAMT ? H / 2 : clamp(G.cam.y, CAMT + vh / 2, CAMB - vh / 2);
 }
 
+/* ---------- sky, clouds and weather ---------- */
+let cloudImg = null, vignette = null, skyImg = null, skyKey = '';
+function cloudSprite(col) {
+  const c = document.createElement('canvas'); c.width = 220; c.height = 110;
+  const g = c.getContext('2d');
+  const blobs = [[60, 70, 34], [100, 52, 44], [145, 64, 36], [178, 76, 24], [34, 80, 22], [120, 80, 34]];
+  g.fillStyle = col;
+  blobs.forEach((b) => { g.beginPath(); g.arc(b[0], b[1], b[2], 0, 6.283); g.fill(); });
+  // a darker belly
+  g.globalCompositeOperation = 'source-atop';
+  const sh = g.createLinearGradient(0, 40, 0, 110);
+  sh.addColorStop(0, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(60,70,90,.22)');
+  g.fillStyle = sh; g.fillRect(0, 0, 220, 110);
+  return c;
+}
+function initAmbient() {
+  const F = fx();
+  cloudImg = cloudSprite(F.cloud);
+  G.clouds = [];
+  for (let i = 0; i < 7; i++) G.clouds.push({ x: rnd(0, 2400), y: rnd(0.04, 0.36), s: rnd(0.5, 1.15), par: rnd(0.08, 0.3), a: rnd(0.6, 0.95) });
+  G.amb = [];
+  const n = F.weather === 'snow' ? 90 : F.weather === 'embers' ? 60 : F.weather === 'none' ? 0 : 40;
+  for (let i = 0; i < n; i++) G.amb.push(newAmb(F.weather, rnd(0, W), rnd(-300, H)));
+}
+function newAmb(kind, x, y) {
+  if (kind === 'snow') return { k: kind, x: x, y: y, vx: 0, vy: rnd(0.35, 0.9), r: rnd(0.8, 2.4), ph: rnd(0, 6.28) };
+  if (kind === 'embers') {
+    const ash = Math.random() < 0.4;
+    return { k: ash ? 'ash' : kind, x: x, y: y, vx: 0, vy: ash ? rnd(0.15, 0.4) : -rnd(0.3, 0.9), r: ash ? rnd(0.8, 1.8) : rnd(0.8, 1.8), ph: rnd(0, 6.28) };
+  }
+  return { k: kind, x: x, y: y, vx: 0, vy: kind === 'dust' ? rnd(-0.05, 0.08) : rnd(-0.12, 0.12), r: rnd(0.6, 1.5), ph: rnd(0, 6.28) };
+}
+// weather drifts with the wind and wraps around the visible part of the world
+function stepAmbient() {
+  G.clouds.forEach((c) => { c.x += 0.04 + G.wind * 0.012; });
+  const hw = cw / scale / 2 + 30, hh = ch / scale / 2 + 30;
+  const x0 = G.cam.x - hw, x1 = G.cam.x + hw, y0 = G.cam.y - hh, y1 = G.cam.y + hh;
+  G.amb.forEach((p) => {
+    p.ph += 0.03;
+    const drift = p.k === 'dust' ? 0.06 : p.k === 'snow' ? 0.035 : 0.02;
+    p.x += G.wind * drift + Math.sin(p.ph) * (p.k === 'snow' ? 0.35 : 0.2);
+    p.y += p.vy;
+    if (p.x < x0) p.x += x1 - x0; else if (p.x > x1) p.x -= x1 - x0;
+    if (p.y < y0) p.y += y1 - y0; else if (p.y > y1) p.y -= y1 - y0;
+  });
+  if (theme.liquid === 'Lava' && Math.random() < 0.08) {
+    G.parts.push({ x: G.cam.x + rnd(-hw, hw), y: WATERY + rnd(1, 6), vx: 0, vy: 0, life: 0, max: rnd(24, 40), type: 'bubble', r: rnd(2, 5), col: '#ffd06a' });
+  }
+}
+// sky gradient, sun and its glow change only with the landscape or the screen size, so they are drawn once
+function skyImage() {
+  const key = theme.id + cw + 'x' + ch + '@' + dpr;
+  if (skyImg && skyKey === key) return skyImg;
+  const F = fx(), c = document.createElement('canvas');
+  c.width = Math.round(cw * dpr); c.height = Math.round(ch * dpr);
+  const g = c.getContext('2d');
+  g.scale(dpr, dpr);
+  const sg = g.createLinearGradient(0, 0, 0, ch);
+  sg.addColorStop(0, theme.sky[0]); sg.addColorStop(0.7, theme.sky[1]); sg.addColorStop(1, theme.sky[2]);
+  g.fillStyle = sg; g.fillRect(0, 0, cw, ch);
+  // sun (a red moon over the volcano) with a soft glow
+  const m = Math.min(cw, ch), sr = clamp(m * 0.07, 18, 60), sx = cw * 0.78, sy = ch * 0.2;
+  const gl = g.createRadialGradient(sx, sy, sr * 0.6, sx, sy, sr * 4.2);
+  gl.addColorStop(0, 'rgba(' + F.glow + ',.55)'); gl.addColorStop(1, 'rgba(' + F.glow + ',0)');
+  g.fillStyle = gl; g.fillRect(sx - sr * 4.2, sy - sr * 4.2, sr * 8.4, sr * 8.4);
+  g.fillStyle = F.sun; g.beginPath(); g.arc(sx, sy, sr, 0, 6.283); g.fill();
+  skyImg = c; skyKey = key;
+  return c;
+}
+function drawSky() {
+  const F = fx(), m = Math.min(cw, ch);
+  ctx.drawImage(skyImage(), 0, 0, cw, ch);
+  if (cloudImg) {
+    const span = cw + 500;
+    G.clouds.forEach((c) => {
+      const w = 200 * c.s * clamp(m / 500, 0.7, 1.6), h = w / 2;
+      const x = ((c.x - (G.cam.x * scale) * c.par) % span + span) % span - 250;
+      ctx.globalAlpha = c.a; ctx.drawImage(cloudImg, x, ch * c.y, w, h);
+    });
+    ctx.globalAlpha = 1;
+  }
+  hills(F.far, ch * 0.58, 34, 0.05, 170);
+  hills(theme.hills[0], ch * 0.64, 22, 0.12, 120);
+  hills(theme.hills[1], ch * 0.74, 28, 0.22, 90);
+}
+function drawAmbient() {
+  G.amb.forEach((p) => {
+    if (p.k === 'snow') { ctx.globalAlpha = 0.85; ctx.fillStyle = '#ffffff'; }
+    else if (p.k === 'embers') { ctx.globalAlpha = 0.5 + Math.sin(p.ph * 4) * 0.4; ctx.fillStyle = '#ffae4a'; }
+    else if (p.k === 'ash') { ctx.globalAlpha = 0.5; ctx.fillStyle = '#5b5150'; }
+    else if (p.k === 'dust') { ctx.globalAlpha = 0.35; ctx.fillStyle = '#fff1d0'; }
+    else { ctx.globalAlpha = 0.55 + Math.sin(p.ph * 2) * 0.25; ctx.fillStyle = '#fff6a8'; }
+    ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 6.283); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+}
+
 /* ---------- drawing ---------- */
 function hills(col, base, amp, par, f) {
   ctx.fillStyle = col;
@@ -2092,11 +2251,33 @@ function hills(col, base, amp, par, f) {
   ctx.lineTo(cw, ch); ctx.closePath(); ctx.fill();
 }
 function waterLayer(col, off, amp) {
+  const wy = (x) => WATERY + off + Math.sin(x / 38 + G.t * 0.04 * (off ? 1.4 : 1)) * amp;
+  const lava = theme.liquid === 'Lava';
+  if (lava && off) {
+    // heat glow above the lava
+    const gl = ctx.createLinearGradient(0, WATERY - 70, 0, WATERY);
+    gl.addColorStop(0, 'rgba(255,120,40,0)'); gl.addColorStop(1, 'rgba(255,120,40,.32)');
+    ctx.fillStyle = gl; ctx.fillRect(-3000, WATERY - 70, W + 6000, 72);
+  }
   ctx.fillStyle = col;
   ctx.beginPath(); ctx.moveTo(-20, H + 40);
-  for (let x = -20; x <= W + 20; x += 14) ctx.lineTo(x, WATERY + off + Math.sin(x / 38 + G.t * 0.04 * (off ? 1.4 : 1)) * amp);
+  for (let x = -20; x <= W + 20; x += 14) ctx.lineTo(x, wy(x));
   ctx.lineTo(W + 20, H + 40); ctx.closePath(); ctx.fill();
   ctx.fillRect(-3000, H + 39, W + 6000, 3000);
+  // bright crest and a few glints on the surface
+  ctx.strokeStyle = lava ? 'rgba(255,220,120,.7)' : 'rgba(255,255,255,.45)'; ctx.lineWidth = off ? 2 : 1.4;
+  ctx.beginPath();
+  for (let x = -20; x <= W + 20; x += 14) { if (x === -20) ctx.moveTo(x, wy(x)); else ctx.lineTo(x, wy(x)); }
+  ctx.stroke();
+  if (off) {
+    ctx.fillStyle = lava ? 'rgba(255,230,140,.8)' : 'rgba(255,255,255,.7)';
+    for (let i = 0; i < 26; i++) {
+      const x = (i * 97 + G.t * (0.3 + (i % 3) * 0.15)) % (W + 40) - 20, y = wy(x) + 6 + (i % 4) * 7;
+      ctx.globalAlpha = 0.25 + 0.35 * Math.abs(Math.sin(G.t * 0.03 + i));
+      ctx.fillRect(x, y, 6 + (i % 3) * 3, 1.4);
+    }
+    ctx.globalAlpha = 1;
+  }
 }
 const FONT = '"Barlow Semi Condensed",Arial,sans-serif';
 function tag(x, y, text, col, active) {
@@ -2275,6 +2456,10 @@ function drawWorm(w) {
   const shake = mood === 'scared' ? Math.sin(G.t * 1.9 + w.ph) * 0.7 : 0;
   const breathe = 1 + Math.sin(G.t * 0.07 + w.ph) * 0.03;
   const act = w === G.cur && G.phase === 'aim' && aimable() && !w.rope;
+  if (w.ground) {
+    ctx.fillStyle = 'rgba(0,0,0,.2)';
+    ctx.beginPath(); ctx.ellipse(w.x - f * 3, w.y + R + 0.5, 13, 2.6, 0, 0, 6.283); ctx.fill();
+  }
   ctx.save(); ctx.translate(w.x + shake, w.y + R); ctx.scale(WS, WS * breathe); ctx.translate(0, -R);
   if (act) {
     const a = G.aim * Math.PI / 180, dx = f * Math.cos(a), dy = -Math.sin(a);
@@ -2449,10 +2634,35 @@ function drawParts() {
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.65)'; ctx.fillStyle = p.col;
       ctx.strokeText(p.txt, p.x, p.y); ctx.fillText(p.txt, p.x, p.y);
     } else if (p.type === 'dirt') {
-      ctx.globalAlpha = 1 - l * l; ctx.fillStyle = p.col; ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r);
+      ctx.globalAlpha = 1 - l * l; ctx.fillStyle = p.col;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-p.r / 2, -p.r / 2, p.r, p.r * 0.8); ctx.restore();
+    } else if (p.type === 'ball') {
+      // the fireball: white core, orange edge
+      const r = p.r * (0.6 + l * 0.7), g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+      g.addColorStop(0, 'rgba(255,255,230,1)'); g.addColorStop(0.35, 'rgba(255,214,90,.95)'); g.addColorStop(0.75, 'rgba(255,110,30,.6)'); g.addColorStop(1, 'rgba(200,40,10,0)');
+      ctx.globalAlpha = 1 - l; ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 6.283); ctx.fill();
+    } else if (p.type === 'ring') {
+      ctx.globalAlpha = (1 - l) * 0.7; ctx.strokeStyle = '#fff6dc'; ctx.lineWidth = 3 * (1 - l) + 0.5;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (0.4 + l * 1.3), 0, 6.283); ctx.stroke();
+    } else if (p.type === 'spark') {
+      ctx.globalAlpha = 1 - l; ctx.strokeStyle = p.col; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - p.vx * 2.2, p.y - p.vy * 2.2); ctx.stroke();
+    } else if (p.type === 'bubble') {
+      ctx.globalAlpha = 1 - l; ctx.strokeStyle = p.col; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(p.x, p.y - l * 3, p.r * (0.5 + l), Math.PI, 6.283); ctx.stroke();
+    } else if (p.type === 'fire') {
+      // glowing flames add up
+      const r = p.r * (1 - l * 0.6);
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.35 * (1 - l); ctx.fillStyle = '#ff7a2a';
+      ctx.beginPath(); ctx.arc(p.x, p.y, r * 2.2, 0, 6.283); ctx.fill();
+      ctx.globalAlpha = 0.9 * (1 - l); ctx.fillStyle = l < 0.3 ? '#fff0b0' : p.col;
+      ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.5, r), 0, 6.283); ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
     } else {
-      const r = p.type === 'smoke' ? p.r * (1 + l * 2.2) : p.r * (1 - l * 0.6);
-      ctx.globalAlpha = (p.type === 'smoke' ? 0.55 : 0.9) * (1 - l); ctx.fillStyle = p.col;
+      const r = p.type === 'smoke' ? p.r * (1 + l * 3) : p.r * (1 - l * 0.6);
+      ctx.globalAlpha = (p.type === 'smoke' ? 0.5 * (1 - l) * Math.min(1, l * 6) : 0.9 * (1 - l)); ctx.fillStyle = p.col;
       ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(0.5, r), 0, 6.283); ctx.fill();
     }
   });
@@ -2460,11 +2670,7 @@ function drawParts() {
 }
 function draw() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const sg = ctx.createLinearGradient(0, 0, 0, ch);
-  sg.addColorStop(0, theme.sky[0]); sg.addColorStop(0.7, theme.sky[1]); sg.addColorStop(1, theme.sky[2]);
-  ctx.fillStyle = sg; ctx.fillRect(0, 0, cw, ch);
-  hills(theme.hills[0], ch * 0.64, 22, 0.12, 120);
-  hills(theme.hills[1], ch * 0.74, 28, 0.22, 90);
+  drawSky();
   const sx = (Math.random() - 0.5) * G.shake, sy = (Math.random() - 0.5) * G.shake;
   ctx.setTransform(dpr * scale, 0, 0, dpr * scale, dpr * (cw / 2 - G.cam.x * scale + sx), dpr * (ch / 2 - G.cam.y * scale + sy));
   waterLayer(theme.water[0], 0, 3);
@@ -2479,8 +2685,13 @@ function draw() {
   G.proj.forEach(drawProj);
   drawTarget();
   drawParts();
+  drawAmbient();
   waterLayer(theme.water[1], 6, 3.5);
   drawBubbles();
+  if (vignette) {
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.drawImage(vignette, 0, 0, cw, ch);
+  }
 }
 function resize() {
   const r = cv.getBoundingClientRect();
@@ -2490,6 +2701,13 @@ function resize() {
   // about 440 world pixels across on a phone, up to 640 on a TV, so the worms are big enough to tell apart
   baseScale = Math.max(cw / clamp(cw * 0.75, 440, 640), ch / H * 0.72);
   fitScale = Math.min(cw / W, ch / H);
+  // the vignette is rendered once at a quarter of the size and stretched
+  vignette = document.createElement('canvas');
+  vignette.width = Math.max(1, Math.round(cw / 4)); vignette.height = Math.max(1, Math.round(ch / 4));
+  const vg = vignette.getContext('2d'), vw4 = vignette.width, vh4 = vignette.height;
+  const rg = vg.createRadialGradient(vw4 / 2, vh4 / 2, Math.min(vw4, vh4) * 0.45, vw4 / 2, vh4 / 2, Math.max(vw4, vh4) * 0.78);
+  rg.addColorStop(0, 'rgba(20,10,10,0)'); rg.addColorStop(1, 'rgba(20,10,10,.24)');
+  vg.fillStyle = rg; vg.fillRect(0, 0, vw4, vh4);
   scale = G.overview ? fitScale : (G.userScale ? clamp(G.userScale, fitScale, 3.5) : baseScale);
 }
 

@@ -1741,42 +1741,148 @@ function sfx(kind, size, x) {
     } else if (kind === 'tick') tone(a, master, 'sine', 1250, 1250, 0.18, 0.002, 0.05);
   } catch (e) { /* sound is optional */ }
 }
-// vowel formants a, e, i, o, u
-const VOWELS = [[730, 1090], [530, 1840], [270, 2290], [570, 840], [300, 870]];
-function syllable(a, out, f0, f1, vw, delay, dur, vib, peak) {
-  const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
-  o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-  if (vib) {
-    const l = a.createOscillator(), lg = a.createGain();
-    l.frequency.value = 10; lg.gain.value = f0 * 0.07;
-    l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + 0.05);
+// a small formant synthesiser: German text -> sounds -> one voice that glides from sound to sound
+const PH = {
+  a: { v: 1, f: [750, 1250, 2500], d: 0.11 }, e: { v: 1, f: [420, 2050, 2650], d: 0.11 }, i: { v: 1, f: [290, 2250, 2950], d: 0.1 },
+  o: { v: 1, f: [460, 820, 2450], d: 0.11 }, u: { v: 1, f: [320, 760, 2250], d: 0.1 }, 'ä': { v: 1, f: [600, 1800, 2550], d: 0.11 },
+  'ö': { v: 1, f: [420, 1500, 2250], d: 0.11 }, 'ü': { v: 1, f: [290, 1650, 2150], d: 0.1 }, '@': { v: 1, f: [500, 1500, 2500], d: 0.07 },
+  '6': { v: 1, f: [650, 1300, 2450], d: 0.09 },
+  aI: { v: 1, f: [750, 1250, 2500], g: [300, 2150, 2900], d: 0.2 }, aU: { v: 1, f: [750, 1250, 2500], g: [330, 780, 2250], d: 0.2 },
+  OY: { v: 1, f: [480, 850, 2450], g: [300, 1650, 2200], d: 0.2 },
+  m: { a: 0.45, f: [260, 1000, 2300], d: 0.07 }, n: { a: 0.45, f: [260, 1550, 2600], d: 0.065 }, N: { a: 0.45, f: [260, 2000, 2700], d: 0.07 },
+  l: { a: 0.6, f: [360, 1150, 2700], d: 0.06 }, r: { a: 0.5, f: [520, 1250, 2300], d: 0.05, nz: [1200, 1, 0.12] },
+  j: { a: 0.6, f: [290, 2200, 2950], d: 0.05 }, v: { a: 0.35, f: [320, 1000, 2300], d: 0.06, nz: [2500, 0.8, 0.2] },
+  s: { nz: [6500, 1.4, 0.6], d: 0.09 }, S: { nz: [3000, 1.6, 0.7], d: 0.1 }, f: { nz: [3800, 0.6, 0.35], d: 0.08 },
+  X: { nz: [3600, 2, 0.45], d: 0.08 }, h: { nz: [1600, 0.8, 0.25], d: 0.05 },
+  p: { stop: 1, nz: [900, 1, 0.6], loc: 900 }, b: { stop: 1, vb: 1, nz: [800, 1, 0.4], loc: 900 },
+  t: { stop: 1, nz: [4200, 1.2, 0.7], loc: 1800 }, d: { stop: 1, vb: 1, nz: [3800, 1.2, 0.45], loc: 1800 },
+  k: { stop: 1, nz: [2200, 1.5, 0.7], loc: 2100 }, g: { stop: 1, vb: 1, nz: [2000, 1.5, 0.45], loc: 2100 }
+};
+const SEP = /[ ,.!?…\-]/;
+// rough German spelling rules, enough for short exclamations
+function phonemes(text) {
+  const s = ' ' + text.toLowerCase().replace(/['’]/g, '').replace(/[^a-zäöüß ,.!?…\-]/g, ' ') + ' ', out = [];
+  const isV = (c) => !!c && 'aeiouäöüy'.indexOf(c) >= 0, sep = (c) => !c || SEP.test(c);
+  let i = 0;
+  while (i < s.length) {
+    const c = s[i], n = s[i + 1], n2 = s[i + 2], prev = s[i - 1];
+    if (sep(c)) { out.push({ p: c === ' ' || c === '-' ? '_' : ',' }); i++; continue; }
+    const two = c + (n || ''), start = sep(prev);
+    if (two === 'sc' && n2 === 'h') { out.push({ p: 'S' }); i += 3; continue; }
+    if (start && c === 's' && (n === 't' || n === 'p')) { out.push({ p: 'S' }); i++; continue; }
+    if (two === 'ch') { out.push({ p: 'X' }); i += 2; continue; }
+    if (two === 'ck') { out.push({ p: 'k' }); i += 2; continue; }
+    if (two === 'ph') { out.push({ p: 'f' }); i += 2; continue; }
+    if (two === 'qu') { out.push({ p: 'k' }, { p: 'v' }); i += 2; continue; }
+    if (two === 'ng') { out.push({ p: 'N' }); i += 2; continue; }
+    if (two === 'nk') { out.push({ p: 'N' }, { p: 'k' }); i += 2; continue; }
+    if (two === 'ei' || two === 'ai' || two === 'ey') { out.push({ p: 'aI' }); i += 2; continue; }
+    if (two === 'ie') { out.push({ p: 'i', long: 1 }); i += 2; continue; }
+    if (two === 'eu' || two === 'äu') { out.push({ p: 'OY' }); i += 2; continue; }
+    if (two === 'au') { out.push({ p: 'aU' }); i += 2; continue; }
+    if (isV(c)) {
+      if (c === 'e' && n === 'r' && sep(n2) && !start) { out.push({ p: '6' }); i += 2; continue; }
+      if (c === 'e' && sep(n) && !start) { out.push({ p: '@' }); i++; continue; }
+      if (c === 'e' && n === 'n' && sep(n2) && !start) { out.push({ p: '@' }, { p: 'n' }); i += 2; continue; }
+      const dbl = n === c, hh = n === 'h' && !isV(n2);
+      out.push({ p: c === 'y' ? 'ü' : c, long: dbl || hh || (!isV(n) && !sep(n) && isV(n2)) || sep(n) });
+      i += dbl || hh ? 2 : 1;
+      continue;
+    }
+    if (c === 'r' && isV(prev) && !isV(n)) { out.push({ p: '6' }); i++; continue; }
+    if (c === n) { i++; continue; }
+    const map = { z: ['t', 's'], x: ['k', 's'], v: ['f'], w: ['v'], 'ß': ['s'], c: ['k'] };
+    (map[c] || [c]).forEach((p) => { if (PH[p]) out.push({ p: p }); });
+    i++;
   }
-  vw.forEach((fq, i) => {
-    const b = a.createBiquadFilter(), bg = a.createGain();
-    b.type = 'bandpass'; b.frequency.value = fq; b.Q.value = 5; bg.gain.value = i ? 0.6 : 1;
-    o.connect(b); b.connect(bg); bg.connect(g);
-  });
-  env(g, t, peak, 0.015, dur);
-  g.connect(out); o.start(t); o.stop(t + dur + 0.05);
+  return out;
 }
-// squeaky gibberish that matches the bubble; screams for fear and pain; every worm has its own pitch
+let speechNoise = null;
+// speaks text; o: pitch (Hz), rate, scared, vol. Returns the length in seconds.
+function wormSpeak(a, out, text, o) {
+  const ph = phonemes(text);
+  const rate = o.rate || 1, fs = 1.12, scared = !!o.scared, q = /\?\s*$/.test(text), ex = /!\s*$/.test(text);
+  const t0 = a.currentTime + 0.03;
+  const mix = a.createGain(); mix.gain.value = 0.45 * (o.vol || 1) * (ex ? 1.15 : 1); mix.connect(out);
+  const src = a.createOscillator(); src.type = 'sawtooth';
+  const soft = a.createBiquadFilter(); soft.type = 'lowpass'; soft.frequency.value = 4800;
+  const vg = a.createGain(); vg.gain.value = 0;
+  src.connect(soft); soft.connect(vg);
+  const F = [0, 1, 2].map((k) => {
+    const b = a.createBiquadFilter(), g = a.createGain();
+    b.type = 'bandpass'; b.Q.value = [5, 9, 12][k]; g.gain.value = [1.6, 1.1, 0.6][k];
+    vg.connect(b); b.connect(g); g.connect(mix);
+    return b;
+  });
+  if (!speechNoise) {
+    speechNoise = a.createBuffer(1, a.sampleRate, a.sampleRate);
+    const d = speechNoise.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  }
+  const ns = a.createBufferSource(); ns.buffer = speechNoise; ns.loop = true;
+  const nf = a.createBiquadFilter(); nf.type = 'bandpass';
+  const ng = a.createGain(); ng.gain.value = 0;
+  ns.connect(nf); nf.connect(ng); ng.connect(mix);
+  if (scared) {
+    const l = a.createOscillator(), lg = a.createGain();
+    l.frequency.value = 9; lg.gain.value = o.pitch * 0.07;
+    l.connect(lg); lg.connect(src.frequency); l.start(t0); l.stop(t0 + 6);
+  }
+  // total length for the melody
+  let total = 0;
+  ph.forEach((x) => { const P = PH[x.p]; total += (x.p === '_' ? 0.05 : x.p === ',' ? 0.16 : P.stop ? 0.07 : P.d * (x.long ? 1.6 : 1)) / rate; });
+  let t = t0, wordStart = true;
+  src.frequency.setValueAtTime(o.pitch, t0);
+  ph.forEach((x, idx) => {
+    if (x.p === '_' || x.p === ',') {
+      const d = (x.p === '_' ? 0.05 : 0.16) / rate;
+      vg.gain.setTargetAtTime(x.p === ',' ? 0 : 0.15, t, 0.015); ng.gain.setTargetAtTime(0, t, 0.01);
+      t += d; wordStart = true;
+      return;
+    }
+    const P = PH[x.p], pos = (t - t0) / (total || 1);
+    // melody: slow fall over the sentence, accent on the first vowel of a word, rise for questions
+    let f = o.pitch * (1 - pos * 0.18) * (scared ? 1.25 : 1) * (ex ? 1.08 : 1);
+    if (q && pos > 0.6) f *= 1 + (pos - 0.6) * 1.4;
+    if (P.v && wordStart) { f *= 1.12; wordStart = false; }
+    if (P.stop) {
+      const close = 0.045 / rate, burst = 0.025 / rate;
+      vg.gain.setTargetAtTime(P.vb ? 0.12 : 0, t, 0.008);
+      F[1].frequency.setTargetAtTime(P.loc * fs, t, 0.01);
+      nf.frequency.setValueAtTime(P.nz[0], t + close); nf.Q.setValueAtTime(P.nz[1], t + close);
+      ng.gain.setValueAtTime(0, t + close); ng.gain.linearRampToValueAtTime(P.nz[2], t + close + 0.004); ng.gain.setTargetAtTime(0, t + close + 0.008, 0.008);
+      t += close + burst;
+      return;
+    }
+    const d = P.d * (x.long ? 1.6 : 1) / rate;
+    if (P.f) {
+      P.f.forEach((v, k) => F[k].frequency.setTargetAtTime(v * fs, t, 0.018));
+      if (P.g) P.g.forEach((v, k) => F[k].frequency.setTargetAtTime(v * fs, t + d * 0.4, 0.03));
+      src.frequency.setTargetAtTime(f, t, 0.03);
+      vg.gain.setTargetAtTime(P.v ? 1 : P.a, t, 0.012);
+    } else vg.gain.setTargetAtTime(0, t, 0.01);
+    if (P.nz) {
+      nf.frequency.setValueAtTime(P.nz[0], t); nf.Q.setValueAtTime(P.nz[1], t);
+      ng.gain.setTargetAtTime(P.nz[2], t, 0.01); ng.gain.setTargetAtTime(0, t + d * 0.8, 0.012);
+    } else ng.gain.setTargetAtTime(0, t, 0.01);
+    if (P.v && idx === ph.length - 1) src.frequency.setTargetAtTime(f * (q ? 1.25 : 0.85), t, d * 0.6);
+    t += d;
+  });
+  vg.gain.setTargetAtTime(0, t, 0.02); ng.gain.setTargetAtTime(0, t, 0.01);
+  src.start(t0); ns.start(t0, Math.random() * 0.5);
+  src.stop(t + 0.2); ns.stop(t + 0.2);
+  return t - t0 + 0.1;
+}
+// every worm speaks its bubble in Wurmisch with its own pitch; frightened worms talk faster and tremble
+const SPEECH_RATE = 1.4;
 function voice(w, kind, txt) {
   const a = actx && !muted ? actx : null;
   if (!a || a.state !== 'running' || a.currentTime < voiceUntil) return;
   try {
-    const out = bus(a, w.x), base = 340 * (w.look && w.look.voice ? w.look.voice : 1);
-    if (kind === 'fear' || kind === 'die' || kind === 'bighurt' || kind === 'drown' || kind === 'burn') {
-      syllable(a, out, base * 1.6, base * 0.75, VOWELS[0], 0, kind === 'die' ? 0.8 : 0.5, true, 1.6);
-      voiceUntil = a.currentTime + 0.6;
-    } else if (kind === 'hurt') {
-      syllable(a, out, base * 1.4, base * 0.9, VOWELS[0], 0, 0.2, false, 1.5);
-      syllable(a, out, base * 1.1, base * 0.8, VOWELS[4], 0.2, 0.24, false, 1.4);
-      voiceUntil = a.currentTime + 0.5;
-    } else {
-      const n = clamp(Math.round(txt.length / 7), 2, 5);
-      for (let i = 0; i < n; i++) { const f = base * rnd(0.85, 1.3); syllable(a, out, f, f * rnd(0.8, 1.15), pick(VOWELS), i * 0.19, 0.16, false, 1.4); }
-      voiceUntil = a.currentTime + n * 0.19 + 0.1;
-    }
+    const scared = kind === 'fear' || kind === 'die' || kind === 'bighurt' || kind === 'drown' || kind === 'burn';
+    const pitch = clamp(300 * (w.look && w.look.voice ? w.look.voice : 1), 250, 420);
+    const dur = wormSpeak(a, bus(a, w.x), txt, { pitch: pitch, rate: SPEECH_RATE * (scared ? 1.15 : 1), scared: scared, vol: 0.75 });
+    voiceUntil = a.currentTime + dur;
   } catch (e) { /* sound is optional */ }
 }
 function setMuted(v) {

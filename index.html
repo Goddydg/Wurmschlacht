@@ -231,6 +231,13 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
         </div>
       </div>
       <div>
+        <div class="lbl">Zeit pro Zug</div>
+        <div class="seg" id="ttime">
+          <button data-t="15">15 s</button><button data-t="20">20 s</button><button data-t="30" class="on">30 s</button>
+          <button data-t="45">45 s</button><button data-t="60">60 s</button><button data-t="90">90 s</button>
+        </div>
+      </div>
+      <div>
         <div class="lbl">Landschaft</div>
         <div class="seg" id="land">
           <button data-land="zufall" class="on">Zufall</button><button data-land="wiese">Wiese</button><button data-land="wueste">Wüste</button>
@@ -324,7 +331,7 @@ const G = {
   team: -1, cur: null, wind: 0, timeLeft: 0, retreat: 0, aim: 35, power: 0, charging: false, weapon: 0,
   cam: { x: W / 2, y: H / 2 }, shake: 0, t: 0, settle: 0, per: 3, wptr: [0, 0, 0], ammo: [{}, {}, {}], overview: false,
   free: false, userScale: null, target: null, shotsLeft: 0, cool: 0, mines: [], barrels: [], crates: [],
-  turnNo: 0, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
+  turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
   bubbles: [], sayQ: [], sayCd: 0, graves: [], turnDmg: 0, fired: false
 };
 const keys = { left: false, right: false, up: false, down: false };
@@ -1264,7 +1271,7 @@ function startTurn() {
   $('handoff').hidden = true;
   setOverview(false);
   setPhase('aim');
-  G.timeLeft = 30 * 60;
+  G.timeLeft = G.turnTime * 60;
   if (G.sudden) G.waterGoal = Math.max(80, G.waterGoal - SD_RISE);
   const crate = Math.random() < 0.5 && spawnCrate();
   if (G.sdNews) toast('Sudden Death: ' + (theme.liquid === 'Lava' ? 'Die Lava' : 'Das Wasser') + ' steigt jetzt jeden Zug');
@@ -1305,14 +1312,16 @@ function startGame() {
   G.n = tn ? +tn.dataset.n : 3;
   const ids = [0, 1, 2, 3].slice(0, G.n);
   G.cpu = ids.map((i) => $('who' + i).dataset.cpu === '1');
+  const tt = document.querySelector('#ttime .on');
+  G.turnTime = tt ? +tt.dataset.t : 30;
+  const ld = document.querySelector('#land .on'), lid = ld ? ld.dataset.land : 'zufall';
   G.teams = ids.map((i) => $('n' + i).value.trim() || (G.cpu[i] ? 'Computer ' : 'Spieler ') + (i + 1));
   try {
     localStorage.setItem('wurm-names', JSON.stringify([0, 1, 2, 3].map((i) => $('n' + i).value.trim())));
-    localStorage.setItem('wurm-setup', JSON.stringify({ n: G.n, cpu: [0, 1, 2, 3].map((i) => $('who' + i).dataset.cpu === '1'), land: lid }));
+    localStorage.setItem('wurm-setup', JSON.stringify({ n: G.n, cpu: [0, 1, 2, 3].map((i) => $('who' + i).dataset.cpu === '1'), land: lid, time: G.turnTime }));
   } catch (e) { /* optional */ }
   const on = document.querySelector('#per .on');
   G.per = on ? +on.dataset.per : 3;
-  const ld = document.querySelector('#land .on'), lid = ld ? ld.dataset.land : 'zufall';
   theme = THEMES.find((t) => t.id === lid) || THEMES[Math.floor(Math.random() * THEMES.length)];
   WATERY = H - 40; G.waterGoal = WATERY; G.turnNo = 0; G.sudden = false; G.ai = null;
   genTerrain(); makeWorms(); placeHazards();
@@ -2616,6 +2625,7 @@ for (let i = 0; i < 4; i++) $('who' + i).addEventListener('click', () => setWho(
 $('sound').addEventListener('click', () => setMuted(!muted));
 function segPick(id, b) { document.querySelectorAll('#' + id + ' button').forEach((x) => x.classList.toggle('on', x === b)); }
 document.querySelectorAll('#land button').forEach((b) => b.addEventListener('click', () => segPick('land', b)));
+document.querySelectorAll('#ttime button').forEach((b) => b.addEventListener('click', () => segPick('ttime', b)));
 document.querySelectorAll('#mode button').forEach((b) => b.addEventListener('click', () => {
   segPick('mode', b);
   if (b.dataset.mode === 'host') openRoom(); else closeRoom();
@@ -2645,6 +2655,8 @@ try {
   const st = JSON.parse(localStorage.getItem('wurm-setup') || 'null');
   if (st && [2, 3, 4].indexOf(st.n) >= 0) setTeamCount(st.n);
   if (st && Array.isArray(st.cpu)) st.cpu.forEach((c, i) => { if (i < 4) setWho(i, !!c); });
+  const tb = st && document.querySelector('#ttime [data-t="' + (+st.time || 0) + '"]');
+  if (tb) segPick('ttime', tb);
   const lb = st && document.querySelector('#land [data-land="' + st.land + '"]');
   if (lb) segPick('land', lb);
   if (localStorage.getItem('wurm-mute') === '1') setMuted(true);

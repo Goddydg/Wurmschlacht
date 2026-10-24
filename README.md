@@ -90,7 +90,7 @@ Bäume, Kakteen und Felsen sind nur Deko: Sie halten nichts auf und werden mit d
 
 - **Erste-Hilfe-Kiste:** gibt dem Wurm, der sie berührt, 35 HP (bis maximal 150).
 - **Waffenkiste:** gibt dem Team Munition für eine Waffe.
-- **Kisten** fallen zu Beginn eines Zugs mit etwa 50 % Wahrscheinlichkeit an einem Fallschirm vom Himmel.
+- **Kisten** bringt zu Beginn eines Zugs mit etwa 50 % Wahrscheinlichkeit ein kleines Propellerflugzeug mit Wurm-Pilot. Es fliegt über die Landschaft und wirft die Kiste an einem Fallschirm ab.
 - **Minen** liegen von Anfang an auf der Karte und zünden, wenn ein Wurm zu nah kommt.
 - **Ölfässer** explodieren bei Treffern und zünden benachbarte Fässer.
 

@@ -460,13 +460,83 @@ function keyPoints() {
   if (sh === 'volcano') return [rnd(180, 260), rnd(1140, 1220)];
   return [rnd(380, 560), rnd(840, 1020)];
 }
+// overhangs for the ninja rope: floating rocks, ledges sticking out of steep slopes and arches over valleys.
+// Each shape is filled like the ground; its top line is kept in tops for the grass edge and the tufts.
+let tops = [];
+function fillShape(top, under) {
+  tctx.beginPath();
+  top.concat(under).forEach((p, i) => { if (i) tctx.lineTo(p[0], p[1]); else tctx.moveTo(p[0], p[1]); });
+  tctx.closePath(); tctx.fill();
+  tops.push(top);
+}
+function floatingRock(cx, cy, rx) {
+  const top = [], under = [], deep = rnd(0.45, 0.65);
+  for (let i = 0; i <= 24; i++) { const t = i / 24; top.push([cx - rx + t * 2 * rx, cy - Math.sin(t * Math.PI) * 9 + rnd(-1, 1)]); }
+  for (let i = 24; i >= 0; i--) {
+    const t = i / 24;
+    under.push([cx - rx + t * 2 * rx, cy + 4 + Math.pow(Math.sin(t * Math.PI), 0.8) * rx * deep + (i % 3 ? 0 : rnd(-3, 4))]);
+  }
+  fillShape(top, under);
+}
+// dir points to the lower side of the slope, where the ledge hangs over
+function ledge(x, dir) {
+  const y = hs[x] + 2, L = rnd(55, 85), th = rnd(13, 19), top = [];
+  for (let i = 0; i <= 12; i++) { const t = i / 12; top.push([x - dir * 12 + dir * (L + 12) * t, y + t * t * 5 - Math.sin(t * Math.PI) * 3]); }
+  const tip = top[top.length - 1];
+  fillShape(top, [[tip[0] - dir * 3, tip[1] + 6], [x + dir * L * 0.55, y + th], [x + dir * 8, y + th + 12], [x - dir * 16, y + th + 34]]);
+}
+function arch(c, span) {
+  const a = Math.round(c - span), b = Math.round(c + span), ya = hs[a], yb = hs[b], top = [], under = [];
+  for (let i = 0; i <= 30; i++) {
+    const t = i / 30, x = a - 14 + (b - a + 28) * t, y = (1 - t) * ya + t * yb - Math.sin(t * Math.PI) * 22;
+    top.push([x, y]);
+    under.unshift([x, y + 15 + (1 - Math.sin(t * Math.PI)) * 22]);
+  }
+  fillShape(top, under);
+}
+function addOverhangs(ph, k) {
+  tops = [];
+  const used = [], free = (x, d) => !used.some((u) => Math.abs(u - x) < d);
+  // arches over the deepest dips
+  const dips = theme.shape === 'mesa' ? [W / 2 + ph[0] * 20 - 60] : k.slice();
+  dips.sort(() => Math.random() - 0.5).slice(0, theme.shape === 'islands' ? 2 : 1).forEach((c) => {
+    c = Math.round(c);
+    const span = theme.shape === 'islands' ? 70 : 90, a = Math.round(c - span), b = Math.round(c + span);
+    if (a < 140 || b > W - 140) return;
+    const rim = Math.min(hs[a], hs[b]);
+    if (rim > WATERY - 60 || hs[c] - rim < 90) return;
+    arch(c, span); used.push(c);
+  });
+  // floating rocks with room to swing underneath
+  let n = theme.shape === 'islands' ? 3 : 2;
+  for (let t = 0; t < 60 && n > 0; t++) {
+    const x = Math.round(rnd(200, W - 200));
+    if (!free(x, 170)) continue;
+    let low = H;
+    for (let d = -60; d <= 60; d += 10) low = Math.min(low, hs[x + d]);
+    const y = Math.round(clamp(low - rnd(120, 170), 70, 300));
+    if (low - y < 105) continue;
+    floatingRock(x, y, rnd(42, 66)); used.push(x); n--;
+  }
+  // ledges on steep slopes
+  n = 3;
+  for (let t = 0; t < 120 && n > 0; t++) {
+    const x = Math.round(rnd(170, W - 170));
+    if (!free(x, 120) || hs[x] > WATERY - 90) continue;
+    const dir = hs[x + 50] > hs[x - 50] ? 1 : -1;
+    if (hs[x + dir * 70] - hs[x] < 60 || hs[x + dir * 30] - hs[x] < 15) continue;
+    ledge(x, dir); used.push(x); n--;
+  }
+}
 // decoration is painted on the terrain image only, so it gets blown away with the ground but never blocks anything
 function decorate() {
   const F = fx();
   // grass tufts, flowers and snow sparkles along the surface; purely visual like the rest of the decoration
-  for (let x = 4; x < W - 4; x += Math.floor(rnd(4, 9))) {
-    const y = hs[x];
-    if (y > WATERY - 4 || Math.abs(hs[x - 3] - hs[x + 3]) > 9) continue;
+  const spots = [];
+  for (let x = 4; x < W - 4; x += Math.floor(rnd(4, 9))) if (hs[x] <= WATERY - 4 && Math.abs(hs[x - 3] - hs[x + 3]) <= 9) spots.push([x, hs[x]]);
+  tops.forEach((top) => top.forEach((p, i) => { if (i % 2 && i > 1 && i < top.length - 2) spots.push([Math.round(p[0]), p[1]]); }));
+  for (const sp of spots) {
+    const x = sp[0], y = sp[1];
     if (F.tuft) {
       tctx.lineWidth = 1.3; tctx.lineCap = 'round';
       for (let b = 0; b < 3; b++) {
@@ -540,6 +610,7 @@ function genTerrain() {
   tctx.beginPath(); tctx.moveTo(0, H);
   for (let x = 0; x < W; x++) tctx.lineTo(x, hs[x]);
   tctx.lineTo(W, H); tctx.closePath(); tctx.fill();
+  addOverhangs(ph, k);
   tctx.globalCompositeOperation = 'source-atop';
   for (let i = 0; i < 900; i++) {
     tctx.fillStyle = theme.speck[Math.random() < 0.5 ? 0 : 1];
@@ -576,6 +647,13 @@ function genTerrain() {
   tctx.strokeStyle = 'rgba(0,0,0,.16)'; tctx.lineWidth = 18; surf(14); tctx.stroke();
   tctx.strokeStyle = theme.edge; tctx.lineWidth = theme.edgeW; surf(2); tctx.stroke();
   tctx.strokeStyle = 'rgba(255,255,255,.3)'; tctx.lineWidth = 1.5; surf(0.5); tctx.stroke();
+  // the same grass edge on top of every overhang
+  tops.forEach((top) => {
+    const line = (off) => { tctx.beginPath(); top.forEach((p, i) => { if (i) tctx.lineTo(p[0], p[1] + off); else tctx.moveTo(p[0], p[1] + off); }); };
+    tctx.strokeStyle = 'rgba(0,0,0,.16)'; tctx.lineWidth = 10; line(9); tctx.stroke();
+    tctx.strokeStyle = theme.edge; tctx.lineWidth = theme.edgeW; line(2); tctx.stroke();
+    tctx.strokeStyle = 'rgba(255,255,255,.3)'; tctx.lineWidth = 1.5; line(0.5); tctx.stroke();
+  });
   tctx.globalCompositeOperation = 'destination-out';
   for (let c = 0; c < 3; c++) {
     let cx = rnd(160, W - 160), cy = hs[Math.floor(cx)] + rnd(90, 140);

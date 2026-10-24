@@ -84,6 +84,8 @@ Im Startmenü wählst du die Landschaft oder lässt den Zufall entscheiden.
 | Inseln | vier Inseln im Meer | Palmen, viel Wasser |
 | Vulkan | ein großer Kegel mit Krater | Lava statt Wasser, Lavagruben an den Seiten |
 
+In jeder Landschaft gibt es außerdem Überhänge für das Ninja-Seil: schwebende Felsinseln über den Tälern, Felsvorsprünge an steilen Hängen und Felsbögen über Schluchten, Meeresbuchten oder Lavagruben. Man kann auch auf ihnen stehen, und sie lassen sich wegsprengen.
+
 Bäume, Kakteen und Felsen sind nur Deko: Sie halten nichts auf und werden mit dem Gelände weggesprengt.
 
 ## Kisten und Hindernisse

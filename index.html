@@ -1698,12 +1698,50 @@ function aiSearch(ai, w) {
   ai.step++;
   return deg >= 85;
 }
+// a crate on the ground that the worm can walk to: no water, no mine, no wall too high, no deadly drop on the way
+function aiCrate(w) {
+  const ok = (c) => {
+    if (c.chute || Math.abs(c.x - w.x) > 260 || Math.abs(c.y - w.y) > 70) return false;
+    const dir = Math.sign(c.x - w.x) || 1;
+    let prev = surfaceY(Math.round(w.x));
+    for (let x = w.x + dir * 8; dir > 0 ? x < c.x : x > c.x; x += dir * 8) {
+      const y = surfaceY(clamp(Math.round(x), 0, W - 1));
+      if (y > WATERY - 14 || prev - y > 22 || y - prev > 70) return false;
+      if (G.mines.some((m) => Math.abs(m.x - x) < 16 && Math.abs(m.y - y) < 20)) return false;
+      prev = y;
+    }
+    return true;
+  };
+  // hurt worms go for first aid first
+  const hpFirst = w.hp <= 70;
+  return G.crates.filter(ok).sort((a, b) => {
+    const pa = hpFirst && a.type === 'hp' ? 0 : 1, pb = hpFirst && b.type === 'hp' ? 0 : 1;
+    return pa - pb || Math.abs(a.x - w.x) - Math.abs(b.x - w.x);
+  })[0] || null;
+}
 function aiTick(w) {
   let ai = G.ai;
   if (!ai) ai = G.ai = { mode: 'wait', t: 40, step: 0, cands: [], walks: 0, plan: null };
   w.walk = 0;
   if (G.phase !== 'aim') return;
-  if (ai.mode === 'wait') { if (--ai.t <= 0) ai.mode = 'think'; return; }
+  if (ai.mode === 'wait') {
+    if (--ai.t > 0) return;
+    ai.crate = aiCrate(w);
+    if (ai.crate) { ai.mode = 'fetch'; ai.t = 360; ai.lx = w.x; ai.stuck = 0; } else ai.mode = 'think';
+    return;
+  }
+  if (ai.mode === 'fetch') {
+    // walk to the crate, hop over bumps, give up when it takes too long or time runs short
+    const c = ai.crate, dx = c.x - w.x;
+    if (G.crates.indexOf(c) < 0 || --ai.t <= 0 || G.timeLeft < 12 * 60 || (Math.abs(dx) < 3 && w.ground)) { ai.mode = 'think'; ai.cands = []; ai.step = 0; return; }
+    const dir = Math.sign(dx);
+    if (surfaceY(clamp(Math.round(w.x + dir * 14), 0, W - 1)) > WATERY - 12) { ai.mode = 'think'; return; }
+    w.walk = dir; w.face = dir;
+    if (Math.abs(w.x - ai.lx) < 0.3) ai.stuck++; else ai.stuck = 0;
+    ai.lx = w.x;
+    if (ai.stuck > 12) { jump(true); ai.stuck = 0; }
+    return;
+  }
   if (ai.mode === 'think') {
     if (!aiSearch(ai, w)) return;
     const best = ai.cands.sort((a, b) => b.s - a.s)[0];

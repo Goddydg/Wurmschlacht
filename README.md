@@ -107,7 +107,7 @@ Jedes Team merkt sich seine zuletzt gewählte Waffe. Die Teams sind abwechselnd 
 
 ## Computer-Gegner
 
-Der Computer spielt Bazooka, Granate und Schrotflinte. Er rechnet vor dem Schuss viele Winkel und Stärken mit derselben Physik durch, die auch das Spiel nutzt, und berücksichtigt dabei Wind, Abpraller und Ölfässer. Treffer am eigenen Team vermeidet er. Damit er nicht perfekt trifft, streut er Winkel und Kraft ein wenig. Findet er kein lohnendes Ziel, läuft er auf den nächsten Gegner zu und sucht erneut.
+Der Computer spielt Bazooka, Granate und Schrotflinte. Er rechnet vor dem Schuss viele Winkel und Stärken mit derselben Physik durch, die auch das Spiel nutzt, und berücksichtigt dabei Wind, Abpraller und Ölfässer. Treffer am eigenen Team vermeidet er. Damit er nicht perfekt trifft, streut er Winkel und Kraft ein wenig. Findet er kein lohnendes Ziel, läuft er auf den nächsten Gegner zu und sucht erneut. Liegt eine Kiste gut erreichbar in der Nähe, holt er sie vor dem Schuss, angeschlagene Würmer zuerst die Erste-Hilfe-Kiste. Wasser, Minen und zu steile Wände auf dem Weg meidet er.
 
 ## Aufbau
 

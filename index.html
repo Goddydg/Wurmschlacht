@@ -138,6 +138,12 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
 .ghost{height:48px;border-radius:12px;border:1px solid var(--line);background:transparent;font-weight:700;cursor:pointer}
 .band{height:12px;border-radius:6px;background:var(--c,var(--accent))}
 .big{font-family:var(--display);font-size:30px;line-height:1.05;text-wrap:balance}
+.pal{display:flex;gap:14px;align-items:center;min-width:0}
+.pal canvas{width:80px;height:80px;flex:none}
+.pname{font-weight:700;font-size:21px;line-height:1.15}
+.pal small{display:block;color:var(--muted);font-size:13px;line-height:1.3;margin-top:2px}
+#cpic{width:110px;height:110px;margin:0 auto;display:block}
+#cpic[hidden]{display:none}
 .facts{display:flex;flex-wrap:wrap;gap:4px 16px;color:var(--muted);font-weight:600;font-variant-numeric:tabular-nums}
 @media (prefers-reduced-motion:reduce){.chip .hp b{transition:none}}
 :root{padding-block:env(safe-area-inset-top,0px) env(safe-area-inset-bottom,0px)}
@@ -161,6 +167,7 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
     <div class="ctlview" id="ctlview" hidden>
       <div class="band" id="cband"></div>
       <div class="lbl" id="cme">Spieler</div>
+      <canvas id="cpic" width="220" height="220" aria-hidden="true" hidden></canvas>
       <div class="big" id="cstate">Verbunden</div>
       <p id="cinfo">Warte auf den Spielstart</p>
       <div class="ctime" id="ctime" hidden>30</div>
@@ -224,6 +231,13 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
         </div>
       </div>
       <div>
+        <div class="lbl">Zeit pro Zug</div>
+        <div class="seg" id="ttime">
+          <button data-t="15">15 s</button><button data-t="20">20 s</button><button data-t="30" class="on">30 s</button>
+          <button data-t="45">45 s</button><button data-t="60">60 s</button><button data-t="90">90 s</button>
+        </div>
+      </div>
+      <div>
         <div class="lbl">Landschaft</div>
         <div class="seg" id="land">
           <button data-land="zufall" class="on">Zufall</button><button data-land="wiese">Wiese</button><button data-land="wueste">Wüste</button>
@@ -254,7 +268,8 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
       <div class="band"></div>
       <div class="lbl">Handy weitergeben an</div>
       <div class="big" id="handname">Spieler</div>
-      <div class="facts"><span id="handworm">Wurm</span><span id="handwind">Wind</span><span id="handsd" hidden>Wasser steigt</span></div>
+      <div class="pal"><canvas id="handpic" width="160" height="160" aria-hidden="true"></canvas><div><div class="pname" id="handworm">Wurm</div><small id="handstats"></small></div></div>
+      <div class="facts"><span id="handwind">Wind</span><span id="handsd" hidden>Wasser steigt</span></div>
       <button class="go" id="ready">Los</button>
     </div>
   </div>
@@ -263,6 +278,7 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
     <div class="card" id="wincard">
       <div class="band"></div>
       <h2 id="wintext">Gewonnen</h2>
+      <div class="pal" id="mvp" hidden><canvas id="winpic" width="160" height="160" aria-hidden="true"></canvas><div><div class="lbl">Held des Spiels</div><div class="pname" id="mvpname"></div><small id="mvpinfo"></small></div></div>
       <button class="go" id="rematch">Revanche</button>
       <button class="ghost" id="menu">Neue Einstellungen</button>
     </div>
@@ -283,7 +299,9 @@ const W = 1400, H = 640, R = 8;
 let WATERY = H - 40; // rises during sudden death
 const SD_ROUNDS = 6, SD_RISE = 16;
 const COL = ['#e4572e', '#2e86de', '#8a4fd0', '#16967f'];
-const NAMES = ['Wurmi', 'Krümel', 'Kringel', 'Fritz', 'Otto', 'Lotte', 'Berta', 'Emil', 'Hugo', 'Frieda', 'Egon', 'Paula', 'Moritz', 'Resi', 'Knut', 'Tilda'];
+const NAMES = ['Wurmi', 'Krümel', 'Kringel', 'Fritz', 'Otto', 'Lotte', 'Berta', 'Emil', 'Hugo', 'Frieda', 'Egon', 'Paula', 'Moritz', 'Resi', 'Knut', 'Tilda',
+  'Bruno', 'Mia', 'Ida', 'Kalle', 'Nudel', 'Pünktchen', 'Socke', 'Bommel', 'Flocke', 'Schnuffel', 'Zottel', 'Pepe', 'Lilo', 'Gustav', 'Erna', 'Oskar',
+  'Anton', 'Rosi', 'Wilma', 'Fips', 'Mücke', 'Tante Trude', 'Opa Heinz', 'Knöpfchen'];
 const INF = Infinity;
 const WEAPONS = [
   { id: 'baz', n: 'Bazooka', d: 'Wind lenkt die Rakete ab', k: 'charge', r: 34, dmg: 50, ammo: INF, b: 'Feuer', h: 'Halten für Kraft' },
@@ -313,7 +331,8 @@ const G = {
   team: -1, cur: null, wind: 0, timeLeft: 0, retreat: 0, aim: 35, power: 0, charging: false, weapon: 0,
   cam: { x: W / 2, y: H / 2 }, shake: 0, t: 0, settle: 0, per: 3, wptr: [0, 0, 0], ammo: [{}, {}, {}], overview: false,
   free: false, userScale: null, target: null, shotsLeft: 0, cool: 0, mines: [], barrels: [], crates: [],
-  turnNo: 0, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0]
+  turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
+  bubbles: [], sayQ: [], sayCd: 0, graves: [], turnDmg: 0, fired: false
 };
 const keys = { left: false, right: false, up: false, down: false };
 let terrain, tctx, mask, hs;
@@ -515,11 +534,21 @@ function makeWorms() {
   }
   while (pts.length < total) pts.push(Math.floor(rnd(60, W - 60)));
   pts.sort(() => Math.random() - 0.5);
-  const nm = NAMES.slice().sort(() => Math.random() - 0.5);
-  pts.forEach((x, i) => {
-    G.worms.push({ team: i % G.n, name: nm[i % nm.length], x: x, y: Math.min(surfaceY(x), WATERY - 40) - 9, vx: 0, vy: 0, fx: 0,
-      hp: 100, alive: true, face: x < W / 2 ? 1 : -1, ground: false, walk: 0 });
+  // two players with the same name must not share one roster
+  const taken = new Set(), keys = new Set();
+  const lists = G.teams.map((t) => {
+    let k = t.trim().toLowerCase();
+    while (keys.has(k)) k += '+';
+    keys.add(k);
+    return teamRoster(k, G.per, taken);
   });
+  pts.forEach((x, i) => {
+    const t = i % G.n, rec = lists[t][Math.floor(i / G.n)];
+    G.worms.push({ team: t, name: rec.name, rec: rec, look: rec.look, pers: rec.pers, x: x, y: Math.min(surfaceY(x), WATERY - 40) - 9, vx: 0, vy: 0, fx: 0,
+      hp: 100, alive: true, face: x < W / 2 ? 1 : -1, ground: false, walk: 0,
+      fear: 0, ouch: 0, sayCd: 0, blink: Math.floor(rnd(60, 300)), ph: rnd(0, 6.28), gdmg: 0 });
+  });
+  saveRosters();
 }
 const bodyHit = (x, y) => solid(x - R + 1, y - 3) || solid(x + R - 1, y - 3) || solid(x, y - R + 1) ||
   solid(x - R + 3, y - R + 3) || solid(x + R - 3, y - R + 3) || solid(x - R + 1, y + 2) || solid(x + R - 1, y + 2);
@@ -527,8 +556,186 @@ const feet = (x, y) => solid(x - 4, y + R) || solid(x, y + R) || solid(x + 4, y 
 
 function hurt(w, d) {
   if (d <= 0 || !w.alive) return;
+  const real = Math.min(d, Math.max(0, w.hp)), by = G.cur;
   w.hp -= d;
   floatText(w.x, w.y - 18, '-' + d, '#fff');
+  // everything that happens during a turn counts for the worm whose turn it is
+  if (by && by.team !== w.team) { by.gdmg += real; by.rec.dmg = (by.rec.dmg | 0) + real; G.turnDmg += real; }
+  w.ouch = 40;
+  if (w.hp > 0) say(w, d >= 30 ? 'bighurt' : 'hurt', { chance: d >= 30 ? 0.9 : 0.6 });
+}
+/* ---------- worm characters ---------- */
+// every player keeps their worms across games: name, look, personality and record live in localStorage
+const PERS = ['mutig', 'ängstlich', 'frech', 'verträumt', 'grummelig'];
+const HATS = ['cap', 'beanie', 'bow', 'top', 'crown', 'flower', 'band', 'glasses', 'party', 'helmet', 'sprout', 'curl', 'mustache'];
+const SKINS = ['#f6a5b0', '#f3b79f', '#eba2c6', '#f8c6b8', '#e8a08c', '#d9aee6', '#f5b6a0', '#efa4a4'];
+const EYES = ['#3b2516', '#1f5a8c', '#2f7a3a', '#6a3a8f', '#8a5a1c'];
+const HATCOL = ['#e94f64', '#f2a33a', '#3fa7d6', '#7bc950', '#9b5de5', '#f15bb5', '#ffd23f', '#4a4e69', '#f4f1ea'];
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+let rosters = {};
+try {
+  rosters = JSON.parse(localStorage.getItem('wurm-roster') || '{}');
+  if (!rosters || typeof rosters !== 'object' || Array.isArray(rosters)) rosters = {};
+} catch (e) { rosters = {}; }
+function saveRosters() { try { localStorage.setItem('wurm-roster', JSON.stringify(rosters)); } catch (e) { /* optional */ } }
+const okRec = (r) => r && typeof r.name === 'string' && r.name.length < 30 && PERS.indexOf(r.pers) >= 0 &&
+  r.look && HATS.indexOf(r.look.hat) >= 0 && typeof r.look.skin === 'number';
+function newWorm(taken, hats) {
+  const free = NAMES.filter((n) => !taken.has(n)), hf = HATS.filter((h) => !hats.has(h));
+  return {
+    name: free.length ? pick(free) : pick(NAMES) + ' ' + (taken.size + 1), pers: pick(PERS),
+    look: { skin: Math.floor(Math.random() * SKINS.length), hat: hf.length ? pick(hf) : pick(HATS), hc: pick(HATCOL), eye: pick(EYES),
+      freckles: Math.random() < 0.35, voice: Math.round(rnd(0.85, 1.5) * 100) / 100 },
+    games: 0, wins: 0, kills: 0, dmg: 0
+  };
+}
+// the first n worms of a player's roster, topped up with new ones; hats differ within a team
+function teamRoster(key, n, taken) {
+  const list = Array.isArray(rosters[key]) ? rosters[key].filter(okRec) : [];
+  const hats = new Set(list.map((r) => r.look.hat));
+  list.forEach((r) => taken.add(r.name));
+  while (list.length < n) {
+    const r = newWorm(taken, hats);
+    taken.add(r.name); hats.add(r.look.hat); list.push(r);
+  }
+  rosters[key] = list;
+  return list.slice(0, n);
+}
+function statsText(r) {
+  const p = [r.pers];
+  if (!r.games) p.push('neu im Team');
+  else {
+    p.push(r.games + (r.games === 1 ? ' Spiel' : ' Spiele'));
+    if (r.wins) p.push(r.wins + (r.wins === 1 ? ' Sieg' : ' Siege'));
+    if (r.kills) p.push(r.kills + ' besiegt');
+  }
+  return p.join(' · ');
+}
+const LINES = {
+  turn: {
+    mutig: ['Auf geht’s!', 'Ich mach das!', 'Keine Angst, ich bin da!', 'Für mein Team!'],
+    'ängstlich': ['Muss ich wirklich?', 'Oh nein, ich bin dran …', 'Ich hab Bauchweh …', 'Bitte nicht hinsehen!'],
+    frech: ['Jetzt gibt’s Ärger!', 'Zeit für Chaos!', 'Aufpassen, ihr Würstchen!', 'Hehe, mein Zug!'],
+    'verträumt': ['Oh, hallo Wolke!', 'Bin ich dran? Schön.', 'Ich hab von Erdbeeren geträumt …', 'Wo war ich?'],
+    grummelig: ['Na gut, na gut …', 'Immer ich.', 'Hmpf. Los.', 'Ich hatte gerade Pause.']
+  },
+  fear: {
+    all: ['Hilfe!', 'Nicht mich!', 'Mama!', 'Aaah!', 'Zielt woanders hin!', 'Ich bin zu jung!'],
+    'ängstlich': ['Ich will nach Hause!', 'Ich mach mich ganz klein!', 'Bitte, bitte nicht!'],
+    mutig: ['Komm doch!', 'Ich hab keine Angst! … ein bisschen.'],
+    frech: ['Du triffst eh nicht!', 'Daneben, daneben!'],
+    grummelig: ['Lass das!', 'Untersteh dich!']
+  },
+  hurt: { all: ['Aua!', 'Autsch!', 'Uff!', 'Meine Frisur!', 'Das gibt einen blauen Fleck!', 'Hey!'] },
+  bighurt: { all: ['AUAAA!', 'Das war gemein!', 'Ich seh Sterne …', 'Mein Popo!'] },
+  die: {
+    all: ['Lebt wohl …', 'Ich komme wieder …', 'Sagt Mama, ich hab sie lieb …'],
+    frech: ['Das zählt nicht!'], 'verträumt': ['Oh, ein Licht …'], grummelig: ['Typisch.']
+  },
+  drown: { all: ['Blubb!', 'Ich kann nicht schwimmen!', 'Blubb blubb …'] },
+  burn: { all: ['Heiß, heiß, heiß!', 'Aua, Lava!'] },
+  mate: { all: ['Neiiin, {n}!', '{n}! Ich räche dich!', 'Wir vermissen dich, {n} …', 'Nicht {n}!'] },
+  kill: {
+    mutig: ['Für das Team!', 'Geschafft!'], 'ängstlich': ['Oh nein, tut mir leid!', 'Das wollte ich nicht!'],
+    frech: ['Hehe!', 'Erwischt!', 'Tschüssi!'], 'verträumt': ['Hoppla …', 'War ich das?'], grummelig: ['Verdient.', 'Pff.']
+  },
+  miss: { all: ['Mist!', 'Daneben …', 'Das war Absicht!', 'Der Wind war schuld!'], grummelig: ['Blöder Wind.'] },
+  crate: { all: ['Ein Geschenk!', 'Juhu!', 'Meins!', 'Ooh, was ist da drin?'] },
+  low: { all: ['Mir geht’s nicht gut …', 'Ich brauch ein Pflaster …', 'Mir ist schwindelig …'] },
+  idle: {
+    'verträumt': ['Schöne Wolken heute.', 'Ob Würmer fliegen können?', 'Ich mag Regen.'],
+    frech: ['Langweilig!', 'Schieß doch endlich!'], grummelig: ['Dauert das noch?', 'Mir ist kalt.'],
+    'ängstlich': ['War da was?', 'Ich versteck mich mal.'], mutig: ['Ich bin bereit!']
+  },
+  win: { all: ['Gewonnen!', 'Juhuuu!', 'Wir sind die Besten!'] }
+};
+function line(w, kind, n) {
+  const L = LINES[kind];
+  if (!L) return '';
+  const pool = (L[w.pers] || []).concat(L.all || []);
+  return pool.length ? pick(pool).replace('{n}', n || '') : '';
+}
+// a speech bubble with voice; o: force, chance, delay (ticks), n (name for {n})
+function say(w, kind, o) {
+  o = o || {};
+  if (o.delay) { G.sayQ.push({ w: w, kind: kind, o: { force: o.force, chance: o.chance, n: o.n }, t: o.delay }); return; }
+  if (!o.force) {
+    if (w.sayCd > 0 || G.sayCd > 0 || G.bubbles.length >= 3) return;
+    if (Math.random() > (o.chance == null ? 1 : o.chance)) return;
+  }
+  const txt = line(w, kind, o.n);
+  if (!txt) return;
+  G.bubbles = G.bubbles.filter((b) => b.w !== w);
+  G.bubbles.push({ w: w, x: w.x, y: w.y, txt: txt, life: 0, max: 110 + txt.length * 3 });
+  w.sayCd = 160; G.sayCd = 35;
+  voice(w, kind, txt);
+}
+// fear, blinking, speech queue and bubbles
+function stepMoods() {
+  if (G.sayCd > 0) G.sayCd--;
+  G.worms.forEach((w) => {
+    if (w.fear > 0) w.fear--;
+    if (w.ouch > 0) w.ouch--;
+    if (w.sayCd > 0) w.sayCd--;
+    if (--w.blink < -7) w.blink = Math.floor(rnd(120, 360));
+  });
+  for (let i = G.sayQ.length - 1; i >= 0; i--) {
+    const q = G.sayQ[i];
+    if (--q.t > 0) continue;
+    G.sayQ.splice(i, 1);
+    if (q.w.alive || q.kind === 'die') say(q.w, q.kind, q.o);
+  }
+  for (let i = G.bubbles.length - 1; i >= 0; i--) if (++G.bubbles[i].life >= G.bubbles[i].max) G.bubbles.splice(i, 1);
+  if (G.phase === 'setup' || G.phase === 'over') return;
+  const scare = (w, chance) => {
+    if (!w.alive || w.kami) return;
+    const was = w.fear > 0;
+    w.fear = 40;
+    if (!was) say(w, 'fear', { chance: chance });
+  };
+  G.proj.forEach((p) => {
+    const reach = (p.r || 30) + 45;
+    G.worms.forEach((w) => {
+      if (w === p.worm || (w === p.owner && p.age < 40)) return;
+      if (Math.hypot(w.x - p.x, w.y - p.y) < reach) scare(w, 0.5);
+    });
+  });
+  G.mines.forEach((m) => { if (m.fuse != null) G.worms.forEach((w) => { if (Math.hypot(w.x - m.x, w.y - m.y) < 70) scare(w, 0.6); }); });
+  G.barrels.forEach((b) => { if (b.fuse != null) G.worms.forEach((w) => { if (Math.hypot(w.x - b.x, w.y - b.y) < 80) scare(w, 0.6); }); });
+  const c = G.cur;
+  if (G.phase === 'aim' && c && c.alive && aimable() && !c.rope) {
+    // worms in the line of fire get nervous
+    const a = G.aim * Math.PI / 180, dx = c.face * Math.cos(a), dy = -Math.sin(a);
+    G.worms.forEach((o) => {
+      if (!o.alive || o === c) return;
+      const vx = o.x - c.x, vy = o.y - c.y, d = Math.hypot(vx, vy);
+      if (d > 20 && d < 380 && (vx * dx + vy * dy) / d > 0.985) scare(o, G.charging ? 0.7 : 0.2);
+    });
+  }
+  if (G.phase === 'aim' && Math.random() < 0.002) {
+    const idle = G.worms.filter((w) => w.alive && w !== c);
+    const w = idle.length ? pick(idle) : null;
+    if (w) say(w, w.hp < 35 ? 'low' : 'idle', { chance: 0.7 });
+  }
+}
+function die(w, drowned) {
+  w.hp = 0; w.alive = false; w.rope = null; w.fear = 0;
+  say(w, drowned ? (theme.liquid === 'Lava' ? 'burn' : 'drown') : 'die', { force: true });
+  if (!drowned) G.graves.push({ x: w.x, y: w.y, vy: 0, col: COL[w.team], name: w.name });
+  const by = G.cur;
+  if (by && by !== w && by.team !== w.team) {
+    by.rec.kills = (by.rec.kills | 0) + 1;
+    if (by.alive) say(by, 'kill', { delay: 80, chance: 0.9 });
+  }
+  const mates = G.worms.filter((o) => o.alive && o.team === w.team).sort((a, b) => Math.abs(a.x - w.x) - Math.abs(b.x - w.x));
+  if (mates[0]) say(mates[0], 'mate', { delay: 45, force: true, n: w.name });
+}
+function stepGraves() {
+  for (let i = G.graves.length - 1; i >= 0; i--) {
+    const g = G.graves[i];
+    groundStep(g, 7, 0.25, 8);
+    if (g.y > WATERY) { splash(g.x); G.graves.splice(i, 1); }
+  }
 }
 function land(w) {
   if (!w.ground && w.vy > 7 && !w.sheep) hurt(w, Math.floor((w.vy - 7) * 7));
@@ -589,7 +796,7 @@ function puff(x, y, type, n, spd, col) {
   }
 }
 function splash(x) {
-  sfx('splash');
+  sfx('splash', 0, x);
   for (let i = 0; i < 16; i++) G.parts.push({ x: x + rnd(-8, 8), y: WATERY, vx: rnd(-1.4, 1.4), vy: -rnd(2, 5), life: 0, max: rnd(25, 45), type: 'splash', r: rnd(2, 4), col: theme.drop });
 }
 function floatText(x, y, txt, col) {
@@ -609,7 +816,7 @@ function stepParts() {
 /* ---------- explosions and projectiles ---------- */
 function explode(x, y, r, dmg) {
   carve(x, y, r);
-  sfx('boom', r);
+  sfx('boom', r, x);
   G.shake = Math.max(G.shake, Math.min(10, r / 6));
   G.parts.push({ x: x, y: y, vx: 0, vy: 0, life: 0, max: 10, type: 'flash', r: r });
   puff(x, y, 'fire', 18, r / 9, '#ffb23d');
@@ -708,10 +915,10 @@ function stepProj(p) {
 function reap() {
   G.worms.forEach((w) => {
     if (!w.alive) return;
-    if (w.y > WATERY + 4) { splash(w.x); w.hp = 0; w.alive = false; }
+    if (w.y > WATERY + 4) { splash(w.x); die(w, true); }
     else if (w.hp <= 0) {
-      w.hp = 0; w.alive = false;
       puff(w.x, w.y, 'fire', 10, 2.2, '#ffb23d'); puff(w.x, w.y, 'smoke', 8, 1.2, '#5d554a');
+      die(w, false);
     }
   });
 }
@@ -759,6 +966,7 @@ function collect(c, w) {
     const add = Math.max(0, Math.min(35, 150 - w.hp));
     w.hp += add;
     floatText(w.x, w.y - 18, '+' + add, '#9cf29c');
+    say(w, 'crate', { force: true });
     toast(G.teams[w.team] + ': Erste-Hilfe-Kiste, +' + add + ' HP');
   } else {
     const it = WEAPONS[WI[c.item]];
@@ -822,7 +1030,7 @@ function shootRay() {
   }
   G.parts.push({ x: x0, y: y0, x2: x, y2: y, vx: 0, vy: 0, life: 0, max: 7, type: 'tracer' });
   G.shake = Math.max(G.shake, 2);
-  sfx('shot');
+  sfx('shot', 0, w.x);
   if (hit) {
     hurt(hit, 25);
     hit.vx += dx * 3; hit.vy -= 1.5; hit.ground = false; hit.y -= 1; hit.fx = 0;
@@ -1044,7 +1252,10 @@ function beginTurn() {
   $('sheet').hidden = true;
   $('handcard').style.setProperty('--c', COL[t]);
   $('handname').textContent = G.teams[t];
-  $('handworm').textContent = 'Wurm: ' + G.cur.name;
+  $('handworm').textContent = G.cur.name;
+  $('handstats').textContent = statsText(G.cur.rec);
+  drawPortrait($('handpic'), G.cur.look, COL[t], 'happy');
+  G.turnDmg = 0; G.fired = false;
   $('handwind').textContent = G.wind === 0 ? 'Windstill' : 'Wind ' + (G.wind > 0 ? 'nach rechts ' : 'nach links ') + Math.abs(G.wind);
   $('handsd').hidden = !G.sudden;
   $('handsd').textContent = theme.liquid + ' steigt';
@@ -1060,18 +1271,32 @@ function startTurn() {
   $('handoff').hidden = true;
   setOverview(false);
   setPhase('aim');
-  G.timeLeft = 30 * 60;
+  G.timeLeft = G.turnTime * 60;
   if (G.sudden) G.waterGoal = Math.max(80, G.waterGoal - SD_RISE);
   const crate = Math.random() < 0.5 && spawnCrate();
   if (G.sdNews) toast('Sudden Death: ' + (theme.liquid === 'Lava' ? 'Die Lava' : 'Das Wasser') + ' steigt jetzt jeden Zug');
   else toast((G.cpu[G.team] || NET.mode === 'host' ? G.teams[G.team] + ': ' : '') + G.cur.name + ' ist dran' + (crate ? ' · Eine Kiste fällt' : ''));
   G.sdNews = false;
   sfx('turn');
+  say(G.cur, 'turn', { delay: 20, force: true });
 }
 function endGame(t) {
   setPhase('over');
   $('wincard').style.setProperty('--c', t >= 0 ? COL[t] : 'var(--muted)');
   $('wintext').textContent = t >= 0 ? G.teams[t] + ' gewinnt' : 'Unentschieden';
+  G.worms.forEach((w) => {
+    w.rec.games = (w.rec.games | 0) + 1;
+    if (w.team === t) w.rec.wins = (w.rec.wins | 0) + 1;
+    if (w.alive) say(w, 'win', { chance: 0.8 });
+  });
+  saveRosters();
+  const mvp = G.worms.slice().sort((a, b) => b.gdmg - a.gdmg)[0];
+  $('mvp').hidden = !(mvp && mvp.gdmg > 0);
+  if (mvp && mvp.gdmg > 0) {
+    $('mvpname').textContent = mvp.name;
+    $('mvpinfo').textContent = G.teams[mvp.team] + ' · ' + mvp.gdmg + ' Schaden · ' + statsText(mvp.rec);
+    drawPortrait($('winpic'), mvp.look, COL[mvp.team], 'happy');
+  }
   $('winner').hidden = false;
 }
 let wake = null;
@@ -1087,17 +1312,20 @@ function startGame() {
   G.n = tn ? +tn.dataset.n : 3;
   const ids = [0, 1, 2, 3].slice(0, G.n);
   G.cpu = ids.map((i) => $('who' + i).dataset.cpu === '1');
+  const tt = document.querySelector('#ttime .on');
+  G.turnTime = tt ? +tt.dataset.t : 30;
+  const ld = document.querySelector('#land .on'), lid = ld ? ld.dataset.land : 'zufall';
   G.teams = ids.map((i) => $('n' + i).value.trim() || (G.cpu[i] ? 'Computer ' : 'Spieler ') + (i + 1));
   try {
     localStorage.setItem('wurm-names', JSON.stringify([0, 1, 2, 3].map((i) => $('n' + i).value.trim())));
-    localStorage.setItem('wurm-setup', JSON.stringify({ n: G.n, cpu: [0, 1, 2, 3].map((i) => $('who' + i).dataset.cpu === '1'), land: lid }));
+    localStorage.setItem('wurm-setup', JSON.stringify({ n: G.n, cpu: [0, 1, 2, 3].map((i) => $('who' + i).dataset.cpu === '1'), land: lid, time: G.turnTime }));
   } catch (e) { /* optional */ }
   const on = document.querySelector('#per .on');
   G.per = on ? +on.dataset.per : 3;
-  const ld = document.querySelector('#land .on'), lid = ld ? ld.dataset.land : 'zufall';
   theme = THEMES.find((t) => t.id === lid) || THEMES[Math.floor(Math.random() * THEMES.length)];
   WATERY = H - 40; G.waterGoal = WATERY; G.turnNo = 0; G.sudden = false; G.ai = null;
   genTerrain(); makeWorms(); placeHazards();
+  G.bubbles = []; G.sayQ = []; G.graves = [];
   G.proj = []; G.parts = []; G.wptr = ids.map(() => 0); G.wsel = ids.map(() => 0); G.team = -1;
   G.ammo = ids.map(() => { const o = {}; WEAPONS.forEach((w) => { o[w.id] = w.ammo; }); return o; });
   G.weapon = 0; G.aim = 35; G.t = 0; G.shake = 0; lastSig = '';
@@ -1137,10 +1365,10 @@ function fire() {
     w.kami = true; w.vx = 0; w.vy = 0; w.fx = 0; w.ground = false; w.y -= 3;
     G.proj.push({ kind: 'kami', sprite: 'kami', worm: w, x: w.x, y: w.y, vx: dx * 4.2, vy: dy * 4.2, age: 0, r: wp.r, dmg: wp.dmg, owner: w });
   } else if (id === 'baz') {
-    consume(id); sfx('launch');
+    consume(id); sfx('launch', 0, w.x);
     G.proj.push({ kind: 'rocket', sprite: 'rocket', x: sx, y: sy, vx: dx * (2 + pw * 10), vy: dy * (2 + pw * 10), age: 0, r: wp.r, dmg: wp.dmg, owner: w });
   } else if (id === 'gre' || id === 'clu') {
-    consume(id); sfx('launch');
+    consume(id); sfx('throw', 0, w.x);
     G.proj.push({ kind: 'nade', sprite: id === 'gre' ? 'grenade' : 'cluster', cluster: id === 'clu', x: sx, y: sy,
       vx: dx * (1 + pw * 11), vy: dy * (1 + pw * 11), age: 0, fuse: 180, bounce: 0.55, r: wp.r, dmg: wp.dmg, owner: w });
   } else if (id === 'sho') {
@@ -1171,6 +1399,7 @@ function fire() {
   }
   G.charging = false; G.power = 0; setPower(0);
   G.free = false;
+  G.fired = true;
   if (ends) {
     G.retreat = id === 'dyn' ? 220 : id === 'she' ? 260 : id === 'min' ? 150 : 110;
     G.shotsLeft = 0;
@@ -1184,7 +1413,7 @@ function jump(ai) {
   if (w.rope) { ropeRelease(w); w.vy -= 2.2; updateWeapons(); return; }
   if (!w.ground) return;
   w.vy = -4.6; w.vx = w.face * 1.3; w.ground = false; w.y -= 1;
-  sfx('jump');
+  sfx('jump', 0, w.x);
 }
 function pressFire() {
   if (cpuTurn()) return;
@@ -1347,7 +1576,8 @@ function aiTick(w) {
 }
 
 /* ---------- sound ---------- */
-let actx = null, noiseBuf = null, muted = false, lastBoom = 0;
+// everything is synthesised: filtered noise, soft sine tones and little formant voices; a compressor keeps it from clipping
+let actx = null, master = null, noiseBuf = null, crunchCurve = null, muted = false, lastBoom = 0, voiceUntil = 0;
 function audio() {
   if (muted) return null;
   try {
@@ -1355,6 +1585,12 @@ function audio() {
       const A = window.AudioContext || window.webkitAudioContext;
       if (!A) return null;
       actx = new A();
+      const comp = actx.createDynamicsCompressor();
+      comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 5; comp.attack.value = 0.004; comp.release.value = 0.3;
+      master = actx.createGain(); master.gain.value = 0.8;
+      master.connect(comp); comp.connect(actx.destination);
+      crunchCurve = new Float32Array(1024);
+      for (let i = 0; i < 1024; i++) { const x = i / 511.5 - 1; crunchCurve[i] = Math.tanh(x * 2.5); }
     }
     if (actx.state === 'suspended') actx.resume();
   } catch (e) { return null; }
@@ -1362,44 +1598,114 @@ function audio() {
 }
 function noiseSrc(a) {
   if (!noiseBuf) {
-    noiseBuf = a.createBuffer(1, a.sampleRate, a.sampleRate);
+    noiseBuf = a.createBuffer(1, a.sampleRate * 2, a.sampleRate);
     const d = noiseBuf.getChannelData(0);
     for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   }
-  const n = a.createBufferSource(); n.buffer = noiseBuf;
+  const n = a.createBufferSource(); n.buffer = noiseBuf; n.loop = true;
   return n;
 }
-// filtered noise with a falling filter: explosions, shots, splashes, launches
-function hiss(a, type, f0, f1, vol, dur) {
-  const t = a.currentTime, n = noiseSrc(a), f = a.createBiquadFilter(), g = a.createGain();
-  f.type = type; f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + dur);
-  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  n.connect(f); f.connect(g); g.connect(a.destination);
-  n.start(t); n.stop(t + dur);
+// sounds sit left or right like their source on screen
+function bus(a, x) {
+  if (x == null || !a.createStereoPanner) return master;
+  const p = a.createStereoPanner();
+  p.pan.value = clamp((x - G.cam.x) * scale / (cw / 2) * 0.6, -0.7, 0.7);
+  p.connect(master);
+  return p;
 }
-function tone(a, f0, f1, vol, dur, delay, wave) {
+function env(g, t, peak, att, dec) {
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.exponentialRampToValueAtTime(peak, t + att);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + att + dec);
+}
+function noiseHit(a, dest, type, f0, f1, q, peak, att, dec, delay) {
+  const t = a.currentTime + (delay || 0), n = noiseSrc(a), f = a.createBiquadFilter(), g = a.createGain();
+  f.type = type; f.Q.value = q;
+  f.frequency.setValueAtTime(f0, t); f.frequency.exponentialRampToValueAtTime(f1, t + att + dec);
+  env(g, t, peak, att, dec);
+  n.connect(f); f.connect(g); g.connect(dest);
+  n.start(t, Math.random()); n.stop(t + att + dec + 0.05);
+}
+function tone(a, dest, wave, f0, f1, peak, att, dec, delay) {
   const t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
-  o.type = wave || 'square'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
-  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g); g.connect(a.destination);
-  o.start(t); o.stop(t + dur + 0.02);
+  o.type = wave; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + att + dec);
+  env(g, t, peak, att, dec);
+  o.connect(g); g.connect(dest);
+  o.start(t); o.stop(t + att + dec + 0.05);
 }
-function sfx(kind, size) {
+function sfx(kind, size, x) {
   const a = actx && !muted ? actx : null;
   if (!a || a.state !== 'running') return;
   try {
+    const out = bus(a, x);
     if (kind === 'boom') {
-      if (a.currentTime - lastBoom < 0.05) return;
+      if (a.currentTime - lastBoom < 0.06) return;
       lastBoom = a.currentTime;
-      hiss(a, 'lowpass', 700 + size * 14, 50, Math.min(0.9, 0.25 + size / 80), 0.5 + size / 70);
-      tone(a, 90, 35, 0.3, 0.35, 0, 'sine');
-    } else if (kind === 'shot') hiss(a, 'highpass', 2600, 600, 0.45, 0.16);
-    else if (kind === 'launch') hiss(a, 'bandpass', 500, 1800, 0.3, 0.3);
-    else if (kind === 'splash') hiss(a, 'bandpass', 1600, 300, 0.35, 0.45);
-    else if (kind === 'jump') tone(a, 260, 560, 0.08, 0.12);
-    else if (kind === 'rope') tone(a, 1100, 420, 0.07, 0.09, 0, 'triangle');
-    else if (kind === 'pickup') { tone(a, 660, 660, 0.09, 0.09); tone(a, 990, 990, 0.09, 0.14, 0.09); }
-    else if (kind === 'turn') { tone(a, 523, 523, 0.07, 0.12, 0, 'triangle'); tone(a, 784, 784, 0.07, 0.2, 0.11, 'triangle'); }
+      const big = clamp((size || 30) / 50, 0.4, 1.3), sh = a.createWaveShaper();
+      sh.curve = crunchCurve; sh.connect(out);
+      tone(a, out, 'sine', 115, 34, 0.55 + big * 0.35, 0.005, 0.3 + big * 0.35);
+      noiseHit(a, sh, 'lowpass', 900 + big * 1200, 80, 0.8, 0.35 + big * 0.25, 0.004, 0.45 + big * 0.7);
+      noiseHit(a, out, 'highpass', 3500, 2200, 0.6, 0.12, 0.001, 0.06);
+      noiseHit(a, out, 'bandpass', 420, 140, 0.9, 0.09 * big, 0.12, 0.8 + big * 0.5, 0.06);
+    } else if (kind === 'shot') {
+      noiseHit(a, out, 'bandpass', 1500, 450, 0.7, 1, 0.001, 0.17);
+      tone(a, out, 'sine', 170, 55, 0.6, 0.002, 0.12);
+    } else if (kind === 'launch') {
+      noiseHit(a, out, 'bandpass', 300, 1500, 1.4, 0.8, 0.06, 0.38);
+      tone(a, out, 'sine', 130, 70, 0.4, 0.004, 0.12);
+    } else if (kind === 'throw') noiseHit(a, out, 'bandpass', 700, 1300, 1.2, 0.7, 0.04, 0.16);
+    else if (kind === 'splash') {
+      noiseHit(a, out, 'lowpass', 1800, 300, 0.7, 0.6, 0.006, 0.42);
+      for (let i = 0; i < 4; i++) tone(a, out, 'sine', rnd(260, 420), rnd(700, 1100), 0.15, 0.005, 0.06, 0.05 + i * 0.07);
+    } else if (kind === 'jump') {
+      tone(a, out, 'sine', 290, 580, 0.4, 0.01, 0.14);
+      tone(a, out, 'sine', 580, 1160, 0.08, 0.01, 0.1);
+    } else if (kind === 'rope') {
+      tone(a, out, 'triangle', 1200, 600, 0.25, 0.002, 0.06);
+      noiseHit(a, out, 'highpass', 3000, 2000, 0.7, 0.25, 0.001, 0.03);
+    } else if (kind === 'pickup') {
+      [784, 988, 1175, 1568].forEach((f, i) => { tone(a, master, 'sine', f, f, 0.1, 0.005, 0.22, i * 0.07); tone(a, master, 'sine', f * 2, f * 2, 0.025, 0.005, 0.12, i * 0.07); });
+    } else if (kind === 'turn') {
+      [[659, 0], [988, 0.14]].forEach((n) => { tone(a, master, 'sine', n[0], n[0], 0.11, 0.005, 0.55, n[1]); tone(a, master, 'sine', n[0] * 3, n[0] * 3, 0.015, 0.003, 0.15, n[1]); });
+    } else if (kind === 'tick') tone(a, master, 'sine', 1250, 1250, 0.18, 0.002, 0.05);
+  } catch (e) { /* sound is optional */ }
+}
+// vowel formants a, e, i, o, u
+const VOWELS = [[730, 1090], [530, 1840], [270, 2290], [570, 840], [300, 870]];
+function syllable(a, out, f0, f1, vw, delay, dur, vib, peak) {
+  const t = a.currentTime + delay, o = a.createOscillator(), g = a.createGain();
+  o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f1, t + dur);
+  if (vib) {
+    const l = a.createOscillator(), lg = a.createGain();
+    l.frequency.value = 10; lg.gain.value = f0 * 0.07;
+    l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + 0.05);
+  }
+  vw.forEach((fq, i) => {
+    const b = a.createBiquadFilter(), bg = a.createGain();
+    b.type = 'bandpass'; b.frequency.value = fq; b.Q.value = 5; bg.gain.value = i ? 0.6 : 1;
+    o.connect(b); b.connect(bg); bg.connect(g);
+  });
+  env(g, t, peak, 0.015, dur);
+  g.connect(out); o.start(t); o.stop(t + dur + 0.05);
+}
+// squeaky gibberish that matches the bubble; screams for fear and pain; every worm has its own pitch
+function voice(w, kind, txt) {
+  const a = actx && !muted ? actx : null;
+  if (!a || a.state !== 'running' || a.currentTime < voiceUntil) return;
+  try {
+    const out = bus(a, w.x), base = 340 * (w.look && w.look.voice ? w.look.voice : 1);
+    if (kind === 'fear' || kind === 'die' || kind === 'bighurt' || kind === 'drown' || kind === 'burn') {
+      syllable(a, out, base * 1.6, base * 0.75, VOWELS[0], 0, kind === 'die' ? 0.8 : 0.5, true, 1.6);
+      voiceUntil = a.currentTime + 0.6;
+    } else if (kind === 'hurt') {
+      syllable(a, out, base * 1.4, base * 0.9, VOWELS[0], 0, 0.12, false, 1.5);
+      syllable(a, out, base * 1.1, base * 0.8, VOWELS[4], 0.12, 0.14, false, 1.4);
+      voiceUntil = a.currentTime + 0.3;
+    } else {
+      const n = clamp(Math.round(txt.length / 6), 2, 6);
+      for (let i = 0; i < n; i++) { const f = base * rnd(0.85, 1.3); syllable(a, out, f, f * rnd(0.8, 1.15), pick(VOWELS), i * 0.11, 0.085, false, 1.4); }
+      voiceUntil = a.currentTime + n * 0.11 + 0.1;
+    }
   } catch (e) { /* sound is optional */ }
 }
 function setMuted(v) {
@@ -1560,7 +1866,7 @@ function phoneView(i) {
   v.worm = G.cur ? G.cur.name : '';
   v.time = $('timer').textContent;
   if (G.phase === 'over') v.win = $('wintext').textContent;
-  if (v.turn) { v.w = G.wview; v.power = Math.round(G.power * 40) / 40; }
+  if (v.turn) { v.w = G.wview; v.power = Math.round(G.power * 40) / 40; v.pic = G.cur.look; v.info = statsText(G.cur.rec); }
   return v;
 }
 // phones ping every 2 s; a phone that stays silent is gone, even if WebRTC has not noticed yet
@@ -1653,10 +1959,13 @@ function ctlView(m) {
   if (m.phase === 'setup') { big = 'Verbunden'; info = 'Warte auf den Spielstart'; }
   else if (m.phase === 'over') { big = m.win || 'Spiel vorbei'; info = 'Gleich geht es weiter'; }
   else if (m.out) { big = 'Ausgeschieden'; info = m.who ? m.who + ' ist dran' : ''; }
-  else if (turn) { big = m.phase === 'retreat' ? 'Rückzug!' : 'Du bist dran'; info = 'Wurm: ' + m.worm; }
+  else if (turn) { big = m.phase === 'retreat' ? 'Rückzug!' : 'Du bist dran'; info = m.worm + (m.info ? ' · ' + m.info : ''); }
   else info = m.who ? m.who + ' ist dran' : '';
   $('cstate').textContent = big; $('cinfo').textContent = info;
   $('ctime').hidden = !turn; $('ctime').textContent = m.time || '';
+  const pic = turn && m.pic && typeof m.pic === 'object';
+  $('cpic').hidden = !pic;
+  if (pic && (!NET.wasTurn || NET.picFor !== m.worm)) { drawPortrait($('cpic'), m.pic, m.col || '#888', 'focus'); NET.picFor = m.worm; }
   $('controls').dataset.off = turn ? '0' : '1';
   if (turn && m.w) {
     $('wname').textContent = m.w.n; $('wammo').textContent = m.w.a;
@@ -1716,15 +2025,17 @@ function tick() {
   }
   G.worms.forEach(stepWorm);
   for (let i = G.proj.length - 1; i >= 0; i--) if (stepProj(G.proj[i])) G.proj.splice(i, 1);
-  stepMines(); stepBarrels(); stepCrates();
+  stepMines(); stepBarrels(); stepCrates(); stepGraves();
   stepParts();
   reap();
+  stepMoods();
   if (playing() && cur && !cur.alive) { G.charging = false; G.power = 0; setPower(0); setPhase('resolve'); G.settle = 0; }
   if (G.phase === 'resolve') {
     const busy = G.proj.length > 0 || G.worms.some((w) => w.alive && (!w.ground || Math.abs(w.vx) > 0.15)) ||
       G.mines.some((m) => m.fuse != null || m.vy > 0) || G.barrels.some((b) => b.fuse != null || b.vy > 0);
     G.settle = busy ? 0 : G.settle + 1;
-    if (G.settle > 50) beginTurn();
+    if (G.settle === 2 && G.fired && G.turnDmg === 0 && cur && cur.alive) say(cur, 'miss', { chance: 0.8 });
+    if (G.settle > (G.bubbles.length ? 90 : 50)) beginTurn();
   }
   updateCam();
   if (NET.mode === 'host' && G.t % 6 === 0) pushState();
@@ -1735,7 +2046,10 @@ function tick() {
   let s = '–', retreat = false;
   if (G.phase === 'aim') s = Math.ceil(G.timeLeft / 60);
   else if (G.phase === 'retreat') { s = Math.ceil(G.retreat / 60); retreat = true; }
-  if (tm.textContent !== String(s)) tm.textContent = s;
+  if (tm.textContent !== String(s)) {
+    tm.textContent = s;
+    if (G.phase === 'aim' && s <= 5 && s > 0 && !G.cpu[G.team]) sfx('tick');
+  }
   tm.classList.toggle('retreat', retreat);
 }
 const CAMT = -400, CAMB = H + 260;
@@ -1787,42 +2101,228 @@ function tag(x, y, text, col, active) {
   return th;
 }
 const aimable = () => { const k = WEAPONS[G.weapon]; return k.k === 'charge' || k.id === 'sho' || k.id === 'bat' || k.id === 'kam' || k.id === 'rop'; };
+const TAU = Math.PI * 2;
+const WS = 1.4; // worms are drawn a bit larger than their collision circle
+// one worm, centred on its body, facing f; mood: happy, focus, grumpy, worried, scared, ouch
+function drawFigure(g, L, col, f, mood, o) {
+  o = o || {};
+  const skin = SKINS[(L.skin | 0) % SKINS.length], line = 'rgba(90,35,45,.6)', wig = o.wig || 0;
+  const circ = (x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, TAU); };
+  const ell = (x, y, rx, ry, rot) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, TAU); };
+  g.save(); g.scale(f, 1);
+  g.lineJoin = 'round'; g.lineCap = 'round';
+  // tail segments
+  [[-11.6, 5.8 + wig * 0.6, 3.3], [-7.3, 5, 4.7]].forEach((t) => {
+    circ(t[0], t[1], t[2]); g.fillStyle = skin; g.fill(); g.lineWidth = 1; g.strokeStyle = line; g.stroke();
+  });
+  g.strokeStyle = 'rgba(90,35,45,.25)'; g.lineWidth = 0.7;
+  g.beginPath(); g.moveTo(-8.6, 1.6); g.lineTo(-9.4, 8.4); g.stroke();
+  // body and shine
+  ell(0, 0, 8, 8.4); g.fillStyle = skin; g.fill(); g.lineWidth = 1.1; g.strokeStyle = line; g.stroke();
+  ell(-2.6, -4.4, 2.6, 1.5, -0.5); g.fillStyle = 'rgba(255,255,255,.38)'; g.fill();
+  // scarf in team colour, the ends flutter behind
+  g.fillStyle = col;
+  g.beginPath(); g.moveTo(-7.8, 2); g.quadraticCurveTo(0, 6.8, 7.8, 2); g.lineTo(7.1, 5.6); g.quadraticCurveTo(0, 10.4, -7.1, 5.6); g.closePath(); g.fill();
+  g.beginPath(); g.moveTo(-5.4, 4.2); g.lineTo(-12, 1.6 + wig); g.lineTo(-11, 6.4 + wig); g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(0,0,0,.18)'; g.lineWidth = 0.6;
+  g.beginPath(); g.moveTo(-7.4, 4); g.quadraticCurveTo(0, 8.6, 7.4, 4); g.stroke();
+  // cheek and freckles
+  circ(5.6, 1.6, 1.8); g.fillStyle = 'rgba(255,80,115,.33)'; g.fill();
+  if (L.freckles) { g.fillStyle = 'rgba(140,60,50,.5)'; [[4.4, 0.8], [5.7, 0.2], [6.8, 1]].forEach((p) => { circ(p[0], p[1], 0.42); g.fill(); }); }
+  // eyes: the back one a bit smaller; pupils look at o.lx/o.ly
+  const scared = mood === 'scared', E = [[1.4, -2.7, 2.2, 2.8], [5.1, -2.7, 2.5, 3.1]];
+  E.forEach((e) => {
+    const ry = e[3] * (scared ? 1.15 : 1);
+    if (o.blink || mood === 'ouch') {
+      g.strokeStyle = '#3a2228'; g.lineWidth = 0.9; g.beginPath();
+      if (mood === 'ouch') { g.moveTo(e[0] - 1.4, e[1] - 1.4); g.lineTo(e[0] + 1, e[1]); g.lineTo(e[0] - 1.4, e[1] + 1.4); }
+      else { g.moveTo(e[0] - 1.8, e[1] + 0.3); g.quadraticCurveTo(e[0], e[1] + 1.6, e[0] + 1.8, e[1] + 0.3); }
+      g.stroke();
+      return;
+    }
+    ell(e[0], e[1], e[2], ry); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 0.6; g.strokeStyle = 'rgba(60,30,40,.45)'; g.stroke();
+    const px = e[0] + clamp(o.lx || 0, -1, 1) * 0.8, py = e[1] + 0.3 + clamp(o.ly || 0, -1, 1) * 0.9, pr = scared ? 0.95 : 1.45;
+    circ(px, py, pr); g.fillStyle = L.eye || '#3b2516'; g.fill();
+    circ(px, py, pr * 0.5); g.fillStyle = '#140c0c'; g.fill();
+    circ(px - pr * 0.4, py - pr * 0.45, pr * 0.38); g.fillStyle = '#fff'; g.fill();
+    if (o.sleepy && !scared) {
+      // dreamy worms have heavy eyelids
+      g.save(); ell(e[0], e[1], e[2], ry); g.clip();
+      g.fillStyle = skin; g.fillRect(e[0] - 3, e[1] - ry - 1, 6, ry * 0.95);
+      g.restore();
+      g.strokeStyle = line; g.lineWidth = 0.7; g.beginPath(); g.moveTo(e[0] - e[2], e[1] - ry * 0.05); g.lineTo(e[0] + e[2], e[1] - ry * 0.05); g.stroke();
+    }
+  });
+  // eyebrows: sad and raised for fear and worry, frowning for focus and grumpy
+  g.strokeStyle = '#4a2a2a'; g.lineWidth = 0.9;
+  const up = scared ? -1.2 : 0;
+  if (scared || mood === 'worried') {
+    g.beginPath(); g.moveTo(-0.6, -6.1 + up); g.lineTo(2.6, -7.2 + up); g.moveTo(3.6, -7.4 + up); g.lineTo(6.9, -6.2 + up); g.stroke();
+  } else if (mood === 'focus' || mood === 'grumpy' || mood === 'ouch') {
+    g.beginPath(); g.moveTo(-0.6, -7.1); g.lineTo(2.6, -6.1); g.moveTo(3.6, -6.2); g.lineTo(6.9, -7.4); g.stroke();
+  }
+  // mouth
+  g.strokeStyle = '#4a2026'; g.lineWidth = 0.9; g.beginPath();
+  if (scared || mood === 'ouch') {
+    ell(5, 3.6, scared ? 1.2 : 1.7, scared ? 1.6 : 1.1); g.fillStyle = '#5a1f2a'; g.fill();
+    ell(5, 4.4, 0.7, 0.4); g.fillStyle = '#e66a7c'; g.fill();
+  } else if (mood === 'happy') { g.arc(4.9, 2.2, 1.9, 0.2 * Math.PI, 0.85 * Math.PI); g.stroke(); }
+  else if (mood === 'focus') { g.moveTo(3.7, 3.7); g.quadraticCurveTo(5, 4.1, 6.4, 3.3); g.stroke(); }
+  else { g.arc(4.9, 5, 1.6, 1.2 * Math.PI, 1.85 * Math.PI); g.stroke(); }
+  if (scared) { ell(-2.6, -7.6, 0.9, 1.3); g.fillStyle = '#8fd3ff'; g.fill(); }
+  drawHat(g, L, col);
+  g.restore();
+}
+function drawHat(g, L, col) {
+  const h = L.hat, c = L.hc || '#e94f64';
+  const rr = (x, y, w, hh) => { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, hh, Math.min(w, hh) / 2); else g.rect(x, y, w, hh); };
+  g.lineWidth = 0.8; g.strokeStyle = 'rgba(40,20,20,.45)';
+  if (h === 'cap') {
+    g.fillStyle = c; g.beginPath(); g.arc(0, -5.6, 6.4, Math.PI, TAU); g.closePath(); g.fill(); g.stroke();
+    rr(2.5, -6.6, 8.6, 1.9); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.5)'; g.beginPath(); g.arc(0, -12, 0.9, 0, TAU); g.fill();
+  } else if (h === 'beanie') {
+    g.fillStyle = c; g.beginPath(); g.arc(0, -5, 7, Math.PI, TAU); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.35)'; rr(-7.2, -6.6, 14.4, 2.4); g.fill();
+    g.fillStyle = '#f4f1ea'; g.beginPath(); g.arc(0, -12.6, 2.2, 0, TAU); g.fill(); g.stroke();
+  } else if (h === 'bow') {
+    g.fillStyle = c; g.beginPath();
+    g.moveTo(-2, -8.2); g.lineTo(-7.4, -12); g.lineTo(-7, -4.8); g.closePath();
+    g.moveTo(-2, -8.2); g.lineTo(3.2, -12.2); g.lineTo(3, -5); g.closePath(); g.fill(); g.stroke();
+    g.beginPath(); g.arc(-2, -8.2, 1.5, 0, TAU); g.fill(); g.stroke();
+  } else if (h === 'top') {
+    g.fillStyle = '#2b2730'; rr(-6.4, -9.2, 12.8, 1.9); g.fill();
+    g.fillRect(-4.2, -17.4, 8.4, 8.6);
+    g.fillStyle = c; g.fillRect(-4.2, -11.4, 8.4, 1.8);
+  } else if (h === 'crown') {
+    g.fillStyle = '#f5c542'; g.strokeStyle = '#b8860b'; g.beginPath();
+    g.moveTo(-5, -7.4); g.lineTo(-5.4, -13); g.lineTo(-2.6, -10); g.lineTo(0, -14.2); g.lineTo(2.6, -10); g.lineTo(5.4, -13); g.lineTo(5, -7.4); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = c; g.beginPath(); g.arc(0, -9.4, 1.1, 0, TAU); g.fill();
+  } else if (h === 'flower') {
+    g.save(); g.translate(-3, -9.2);
+    g.fillStyle = c; for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(Math.cos(i * 1.257) * 2, Math.sin(i * 1.257) * 2, 1.7, 0, TAU); g.fill(); }
+    g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(0, 0, 1.3, 0, TAU); g.fill();
+    g.restore();
+  } else if (h === 'band') {
+    g.strokeStyle = c; g.lineWidth = 2.3; g.beginPath(); g.arc(0, 0, 7.1, 1.08 * Math.PI, 1.77 * Math.PI); g.stroke();
+    g.lineWidth = 1.6; g.beginPath(); g.moveTo(-6.2, -3.6); g.lineTo(-10.2, -1.6); g.moveTo(-6.2, -3.6); g.lineTo(-10, -6); g.stroke();
+  } else if (h === 'glasses') {
+    g.strokeStyle = '#2b2b2b'; g.lineWidth = 0.9;
+    g.beginPath(); g.arc(1.4, -2.6, 2.9, 0, TAU); g.moveTo(8.1, -2.6); g.arc(5.2, -2.6, 2.9, 0, TAU); g.stroke();
+    g.beginPath(); g.moveTo(-1.5, -2.8); g.lineTo(-6, -3.6); g.stroke();
+    g.fillStyle = 'rgba(180,220,255,.18)'; g.beginPath(); g.arc(5.2, -2.6, 2.9, 0, TAU); g.fill();
+  } else if (h === 'party') {
+    g.fillStyle = c; g.beginPath(); g.moveTo(-3.8, -7.2); g.lineTo(3.8, -7.2); g.lineTo(0.8, -18.4); g.closePath(); g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.8)'; g.lineWidth = 1; g.beginPath(); g.moveTo(-2.6, -10.2); g.lineTo(2.9, -11.6); g.moveTo(-1.4, -13.8); g.lineTo(2, -14.6); g.stroke();
+    g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(0.8, -18.6, 1.6, 0, TAU); g.fill();
+  } else if (h === 'helmet') {
+    g.fillStyle = '#5f7040'; g.beginPath(); g.arc(0, -4.4, 8.2, Math.PI, TAU); g.closePath(); g.fill(); g.stroke();
+    g.fillStyle = '#4b5a32'; rr(-9, -5.4, 18, 1.8); g.fill();
+    g.fillStyle = c; g.beginPath(); g.arc(-1.5, -9, 1.3, 0, TAU); g.fill();
+  } else if (h === 'sprout') {
+    g.strokeStyle = '#4c8f35'; g.lineWidth = 0.9; g.beginPath(); g.moveTo(0, -8.2); g.quadraticCurveTo(-0.4, -10.5, 0.6, -12.6); g.stroke();
+    g.fillStyle = '#6cbf4a';
+    g.beginPath(); g.ellipse(-1.8, -12.8, 2.4, 1.1, -0.6, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse(2.8, -13.3, 2.4, 1.1, 0.6, 0, TAU); g.fill();
+  } else if (h === 'curl') {
+    g.strokeStyle = '#5a3a26'; g.lineWidth = 1.4; g.beginPath();
+    g.moveTo(-0.5, -8.1); g.quadraticCurveTo(-1.6, -13, 2.4, -13.2); g.quadraticCurveTo(5, -12.8, 3.6, -10.6); g.quadraticCurveTo(2.2, -9.6, 1.8, -11.2); g.stroke();
+  } else if (h === 'mustache') {
+    g.fillStyle = '#5a3a26';
+    g.beginPath(); g.ellipse(4, 1.7, 1.9, 0.85, -0.35, 0, TAU); g.fill();
+    g.beginPath(); g.ellipse(6.9, 1.7, 1.7, 0.85, 0.35, 0, TAU); g.fill();
+    g.strokeStyle = '#5a3a26'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(2.4, 2); g.quadraticCurveTo(1.6, 1.4, 2, 0.6); g.stroke();
+  }
+}
+// a round portrait for the handoff card, the winner card and the phone
+function drawPortrait(cnv, L, col, mood) {
+  if (!cnv || !L) return;
+  const g = cnv.getContext('2d'), s = cnv.width;
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.clearRect(0, 0, s, s);
+  g.save();
+  g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, TAU); g.clip();
+  g.fillStyle = col; g.globalAlpha = 0.2; g.fillRect(0, 0, s, s); g.globalAlpha = 1;
+  g.translate(s / 2 + s * 0.05, s * 0.6); g.scale(s / 30, s / 30);
+  drawFigure(g, L, col, 1, mood, { lx: 0.5, ly: 0.1 });
+  g.restore();
+}
+function moodOf(w) {
+  if (w.fear > 0) return 'scared';
+  if (w.ouch > 0) return 'ouch';
+  if (w === G.cur && playing()) return 'focus';
+  if (w.hp < 35) return 'worried';
+  return w.pers === 'grummelig' ? 'grumpy' : 'happy';
+}
 function drawWorm(w) {
-  const c = COL[w.team], f = w.face;
-  ctx.save(); ctx.translate(w.x, w.y);
-  ctx.beginPath(); ctx.arc(-f * 5, 3.5, 5.5, 0, 6.283); ctx.fillStyle = c; ctx.fill();
-  ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fill();
+  const c = COL[w.team], f = w.face, mood = moodOf(w);
+  // pupils follow the flying projectile or the worm whose turn it is
+  const tg = G.proj[0] || (G.cur !== w ? G.cur : null);
+  let lx = 0, ly = 0;
+  if (tg) { const dx = tg.x - w.x, dy = tg.y - w.y, l = Math.hypot(dx, dy) || 1; lx = dx / l * f; ly = dy / l; }
+  const shake = mood === 'scared' ? Math.sin(G.t * 1.9 + w.ph) * 0.7 : 0;
+  const breathe = 1 + Math.sin(G.t * 0.07 + w.ph) * 0.03;
   const act = w === G.cur && G.phase === 'aim' && aimable() && !w.rope;
+  ctx.save(); ctx.translate(w.x + shake, w.y + R); ctx.scale(WS, WS * breathe); ctx.translate(0, -R);
   if (act) {
     const a = G.aim * Math.PI / 180, dx = f * Math.cos(a), dy = -Math.sin(a);
-    ctx.strokeStyle = '#2a2018'; ctx.lineWidth = 4; ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(dx * 4, dy * 4 - 1); ctx.lineTo(dx * 14, dy * 14 - 1); ctx.stroke();
+    ctx.strokeStyle = '#2a2018'; ctx.lineWidth = 3.4; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(dx * 4, dy * 4 + 1); ctx.lineTo(dx * 13, dy * 13 + 1); ctx.stroke();
   }
-  ctx.beginPath(); ctx.arc(0, 0, R, 0, 6.283); ctx.fillStyle = c; ctx.fill();
-  ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(20,12,8,.55)'; ctx.stroke();
-  ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.ellipse(f * 3, -2, 2.8, 3.3, 0, 0, 6.283); ctx.fill();
-  ctx.fillStyle = '#1c1410'; ctx.beginPath(); ctx.arc(f * 4, -1.6, 1.3, 0, 6.283); ctx.fill();
-  ctx.strokeStyle = 'rgba(20,12,8,.8)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(f, -6); ctx.lineTo(f * 5.5, -4.6); ctx.stroke();
+  drawFigure(ctx, w.look, c, f, mood, { lx: lx, ly: ly, blink: w.blink < 0, sleepy: w.pers === 'verträumt', wig: Math.sin(G.t * 0.12 + w.ph) });
   ctx.restore();
   const on = w === G.cur && playing();
-  const th = tag(w.x, w.y - 20, on ? w.name + '  ' + w.hp : String(w.hp), c, on);
+  const th = tag(w.x, w.y - 30, on ? w.name + '  ' + w.hp : String(w.hp), c, on);
   if (on) {
-    const bob = Math.sin(G.t * 0.12) * 3, ty = w.y - 20 - th / 2 - 6 + bob;
+    const bob = Math.sin(G.t * 0.12) * 3, ty = w.y - 30 - th / 2 - 6 + bob;
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(w.x - 5, ty - 6); ctx.lineTo(w.x + 5, ty - 6); ctx.lineTo(w.x, ty); ctx.closePath(); ctx.fill();
   }
   if (act) {
     const a = G.aim * Math.PI / 180, dx = f * Math.cos(a), dy = -Math.sin(a);
     ctx.lineCap = 'round';
     ctx.strokeStyle = 'rgba(255,255,255,.9)'; ctx.lineWidth = 2; ctx.setLineDash([2, 5]);
-    ctx.beginPath(); ctx.moveTo(w.x + dx * 18, w.y + dy * 18 - 2); ctx.lineTo(w.x + dx * 60, w.y + dy * 60 - 2); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(w.x + dx * 22, w.y + dy * 22 - 2); ctx.lineTo(w.x + dx * 64, w.y + dy * 64 - 2); ctx.stroke();
     ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(w.x + dx * 66, w.y + dy * 66 - 2, 5, 0, 6.283); ctx.stroke();
+    ctx.beginPath(); ctx.arc(w.x + dx * 70, w.y + dy * 70 - 2, 5, 0, 6.283); ctx.stroke();
     if (G.power > 0) {
       ctx.strokeStyle = G.power > 0.8 ? '#ff4d2e' : '#ffd23d'; ctx.lineWidth = 5;
-      ctx.beginPath(); ctx.moveTo(w.x + dx * 14, w.y + dy * 14 - 2); ctx.lineTo(w.x + dx * (14 + G.power * 46), w.y + dy * (14 + G.power * 46) - 2); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w.x + dx * 18, w.y + dy * 18 - 2); ctx.lineTo(w.x + dx * (18 + G.power * 46), w.y + dy * (18 + G.power * 46) - 2); ctx.stroke();
     }
   }
+}
+function drawGrave(g) {
+  ctx.save(); ctx.translate(g.x, g.y);
+  ctx.fillStyle = '#9a9a96'; ctx.strokeStyle = '#5d5d5a'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(-5, 7); ctx.lineTo(-5, -3); ctx.arc(0, -3, 5, Math.PI, TAU); ctx.lineTo(5, 7); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.strokeStyle = '#6e6e6a'; ctx.beginPath(); ctx.moveTo(0, -5.5); ctx.lineTo(0, 1.5); ctx.moveTo(-2.4, -3); ctx.lineTo(2.4, -3); ctx.stroke();
+  ctx.fillStyle = g.col; ctx.beginPath(); ctx.arc(-5.5, 5.5, 1.8, 0, TAU); ctx.fill();
+  ctx.fillStyle = '#ffd23f'; ctx.beginPath(); ctx.arc(-5.5, 5.5, 0.7, 0, TAU); ctx.fill();
+  ctx.restore();
+  if (scale > 1.1) {
+    ctx.globalAlpha = 0.75; tag(g.x, g.y - 14, g.name, '#6b665c', false); ctx.globalAlpha = 1;
+  }
+}
+function drawBubbles() {
+  const fs = clamp(12 / scale, 10, 40);
+  ctx.font = '700 ' + fs + 'px ' + FONT;
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  G.bubbles.forEach((b) => {
+    const w = b.w;
+    if (w.alive) { b.x = w.x; b.y = w.y; }
+    const tw = ctx.measureText(b.txt).width + fs * 1.1, th = fs * 1.7;
+    const x = clamp(b.x, tw / 2 + 4, W - tw / 2 - 4), y = b.y - 30 - fs * 1.9 - th / 2;
+    ctx.globalAlpha = clamp(Math.min((b.max - b.life) / 15, b.life / 4), 0, 1);
+    ctx.fillStyle = '#fffdf6'; ctx.strokeStyle = 'rgba(40,30,20,.55)'; ctx.lineWidth = clamp(1.4 / scale, 1, 4);
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(x - tw / 2, y - th / 2, tw, th, th / 2.2); else ctx.rect(x - tw / 2, y - th / 2, tw, th);
+    ctx.fill(); ctx.stroke();
+    const tx = clamp(b.x, x - tw / 2 + th / 2, x + tw / 2 - th / 2);
+    ctx.beginPath(); ctx.moveTo(tx - fs * 0.4, y + th / 2 - 1); ctx.lineTo(tx, y + th / 2 + fs * 0.6); ctx.lineTo(tx + fs * 0.4, y + th / 2 - 1); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = '#fffdf6'; ctx.fillRect(tx - fs * 0.38, y + th / 2 - 2.5, fs * 0.76, 2.5);
+    ctx.fillStyle = '#2b261e'; ctx.fillText(b.txt, x, y + 0.5);
+  });
+  ctx.globalAlpha = 1;
 }
 function drawProj(p) {
   const s = p.sprite;
@@ -1960,6 +2460,7 @@ function draw() {
   G.barrels.forEach(drawBarrel);
   G.mines.forEach(drawMine);
   G.crates.forEach(drawCrate);
+  G.graves.forEach(drawGrave);
   G.worms.forEach((w) => { if (w.alive && w.rope) drawRope(w); });
   G.worms.forEach((w) => { if (w.alive && w !== G.cur) drawWorm(w); });
   if (G.cur && G.cur.alive) drawWorm(G.cur);
@@ -1967,13 +2468,15 @@ function draw() {
   drawTarget();
   drawParts();
   waterLayer(theme.water[1], 6, 3.5);
+  drawBubbles();
 }
 function resize() {
   const r = cv.getBoundingClientRect();
   dpr = Math.min(window.devicePixelRatio || 1, 2.5);
   cw = Math.max(1, r.width); ch = Math.max(1, r.height);
   cv.width = Math.round(cw * dpr); cv.height = Math.round(ch * dpr);
-  baseScale = Math.max(cw / 560, ch / H * 0.72);
+  // about 440 world pixels across on a phone, up to 640 on a TV, so the worms are big enough to tell apart
+  baseScale = Math.max(cw / clamp(cw * 0.75, 440, 640), ch / H * 0.72);
   fitScale = Math.min(cw / W, ch / H);
   scale = G.overview ? fitScale : (G.userScale ? clamp(G.userScale, fitScale, 3.5) : baseScale);
 }
@@ -2122,6 +2625,7 @@ for (let i = 0; i < 4; i++) $('who' + i).addEventListener('click', () => setWho(
 $('sound').addEventListener('click', () => setMuted(!muted));
 function segPick(id, b) { document.querySelectorAll('#' + id + ' button').forEach((x) => x.classList.toggle('on', x === b)); }
 document.querySelectorAll('#land button').forEach((b) => b.addEventListener('click', () => segPick('land', b)));
+document.querySelectorAll('#ttime button').forEach((b) => b.addEventListener('click', () => segPick('ttime', b)));
 document.querySelectorAll('#mode button').forEach((b) => b.addEventListener('click', () => {
   segPick('mode', b);
   if (b.dataset.mode === 'host') openRoom(); else closeRoom();
@@ -2151,6 +2655,8 @@ try {
   const st = JSON.parse(localStorage.getItem('wurm-setup') || 'null');
   if (st && [2, 3, 4].indexOf(st.n) >= 0) setTeamCount(st.n);
   if (st && Array.isArray(st.cpu)) st.cpu.forEach((c, i) => { if (i < 4) setWho(i, !!c); });
+  const tb = st && document.querySelector('#ttime [data-t="' + (+st.time || 0) + '"]');
+  if (tb) segPick('ttime', tb);
   const lb = st && document.querySelector('#land [data-land="' + st.land + '"]');
   if (lb) segPick('land', lb);
   if (localStorage.getItem('wurm-mute') === '1') setMuted(true);

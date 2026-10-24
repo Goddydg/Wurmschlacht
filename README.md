@@ -35,13 +35,21 @@ Die Handys verbinden sich direkt mit dem Spielleiter (WebRTC). Der öffentliche 
 | Waffenleiste | Waffenmenü öffnen, nur während des Zielens |
 | Feuer | Bazooka, Granate und Clusterbombe: halten für Kraft, loslassen zum Schießen. Alle anderen Waffen: antippen |
 
-**Ton:** Der Knopf mit dem Lautsprecher am rechten Rand schaltet die Geräusche aus und wieder an. Die Einstellung bleibt gespeichert.
+**Ton:** Alle Geräusche werden im Browser erzeugt: Explosionen, Schüsse, Wasser, Stimmen und ein Ticken in den letzten fünf Sekunden. Sie kommen von links oder rechts, je nachdem, wo es knallt. Der Knopf mit dem Lautsprecher am rechten Rand schaltet die Geräusche aus und wieder an. Die Einstellung bleibt gespeichert.
 
 **Zoomen und Verschieben:** Zwei Finger auseinander oder zusammen ziehen zoomt, ein Finger verschiebt die Ansicht, am Rechner zoomt das Mausrad. Die Knöpfe `+` und `−` am rechten Rand zoomen schrittweise, der Knopf mit dem Fadenkreuz springt zurück zum aktiven Wurm. Der Knopf `Karte` oben links zeigt das ganze Spielfeld.
 
 Tastatur am Rechner: Pfeiltasten, `J` für Sprung, Leertaste für Feuer.
 
 Bei Luftschlag und Teleport tippst du das Ziel auf der Karte an oder verschiebst das Fadenkreuz mit den Pfeilen.
+
+## Die Würmer
+
+Jeder Wurm ist ein eigener Charakter. Er hat einen Namen, eine Persönlichkeit (*mutig*, *ängstlich*, *frech*, *verträumt* oder *grummelig*), eine eigene Hautfarbe, Augenfarbe, Stimmhöhe und ein Erkennungszeichen: Kappe, Mütze, Schleife, Zylinder, Krone, Blume, Stirnband, Brille, Partyhut, Helm, Sprössling, Locke oder Schnurrbart. Innerhalb eines Teams trägt jeder Wurm etwas anderes. Der Schal zeigt die Teamfarbe.
+
+**Die Würmer bleiben dir.** Das Spiel merkt sich die Würmer jedes Spielers unter seinem Namen. Wer beim nächsten Mal wieder als „Lena“ spielt, bekommt dieselben Würmer zurück, mit ihrer Bilanz aus Spielen, Siegen und besiegten Gegnern. Die Übergabe-Seite und das Handy zeigen den Wurm, der dran ist, mit Bild und Bilanz. Nach dem Spiel wird der „Held des Spiels“ gekürt.
+
+**Gefühle und Sprüche:** Die Würmer reden in Sprechblasen und mit eigener Piepsstimme. Was sie sagen, hängt von ihrer Persönlichkeit ab. Sie bekommen Angst, wenn jemand auf sie zielt oder eine Granate neben ihnen liegt: Augen weit auf, Zittern, Schweißtropfen und ein Schrei. Sie jammern bei Treffern, freuen sich über Kisten und trauern um gefallene Teamkameraden. Wenig Leben macht sie sichtbar besorgt. Wo ein Wurm fällt, bleibt ein Grabstein mit seinem Namen.
 
 ## Waffen
 
@@ -88,7 +96,7 @@ Bäume, Kakteen und Felsen sind nur Deko: Sie halten nichts auf und werden mit d
 
 Zu Beginn wählst du 2, 3 oder 4 Spieler, für jeden Spieler *Mensch* oder *Computer*, und 2, 3 oder 4 Würmer pro Team.
 
-Jedes Team merkt sich seine zuletzt gewählte Waffe. Die Teams sind abwechselnd dran, pro Zug gibt es 30 Sekunden. Nach dem Schuss bleibt kurz Zeit zum Rückzug. Danach erscheint die Übergabe an das nächste Team. Die Übergabe entfällt, wenn der Computer dran ist oder nur noch ein Mensch mitspielt. Würmer, die ins Wasser fallen, scheiden aus.
+Jedes Team merkt sich seine zuletzt gewählte Waffe. Die Teams sind abwechselnd dran, pro Zug gibt es 30 Sekunden. Im Startmenü lässt sich die Zeit pro Zug auf 15, 20, 30, 45, 60 oder 90 Sekunden einstellen. Nach dem Schuss bleibt kurz Zeit zum Rückzug. Danach erscheint die Übergabe an das nächste Team. Die Übergabe entfällt, wenn der Computer dran ist oder nur noch ein Mensch mitspielt. Würmer, die ins Wasser fallen, scheiden aus.
 
 **Sudden Death:** Nach sechs Runden steigt das Wasser (beim Vulkan die Lava) zu Beginn jedes Zugs ein Stück. Tief liegende Würmer müssen nach oben, sonst ertrinken sie.
 

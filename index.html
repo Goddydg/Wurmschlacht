@@ -136,6 +136,7 @@ p{margin:0;color:var(--muted);line-height:1.35}
 .seg button{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:700;cursor:pointer}
 .seg button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .seg.two{grid-template-columns:1fr 1fr}
+.seg.four{grid-template-columns:repeat(4,1fr)}
 .speech .lbl{display:flex;justify-content:space-between;gap:8px}
 .speech .lbl span{font-variant-numeric:tabular-nums;color:var(--fg)}
 .rangerow{display:flex;align-items:center;gap:10px;margin-top:6px}
@@ -276,6 +277,12 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
         </div>
       </div>
       <div>
+        <div class="lbl">Kisten</div>
+        <div class="seg four" id="crates">
+          <button data-c="aus">Aus</button><button data-c="selten">Selten</button><button data-c="normal" class="on">Normal</button><button data-c="oft">Oft</button>
+        </div>
+      </div>
+      <div>
         <div class="lbl">Landschaft</div>
         <div class="seg" id="land">
           <button data-land="zufall" class="on">Zufall</button><button data-land="wiese">Wiese</button><button data-land="wueste">Wüste</button>
@@ -370,7 +377,7 @@ const G = {
   team: -1, cur: null, wind: 0, timeLeft: 0, retreat: 0, aim: 35, power: 0, charging: false, weapon: 0,
   cam: { x: W / 2, y: H / 2 }, shake: 0, t: 0, settle: 0, per: 3, wptr: [0, 0, 0], ammo: [{}, {}, {}], overview: false,
   free: false, userScale: null, target: null, shotsLeft: 0, cool: 0, mines: [], barrels: [], crates: [],
-  mode: 'ffa', ally: null, aptr: {}, turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
+  mode: 'ffa', ally: null, aptr: {}, crateRate: 'normal', lastCrate: -9, turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
   bubbles: [], sayQ: [], clouds: [], amb: [], planes: [], sayCd: 0, graves: [], turnDmg: 0, fired: false
 };
 const keys = { left: false, right: false, up: false, down: false };
@@ -1093,7 +1100,7 @@ function stepCrates() {
 }
 // a propeller plane crosses the sky and drops the crate on its parachute
 function spawnCrate() {
-  if (G.crates.length + G.planes.length >= 3) return false;
+  if (G.crates.length + G.planes.length >= (G.crateRate === 'oft' ? 3 : 2)) return false;
   let x = Math.floor(rnd(60, W - 60)), tries = 0;
   while (surfaceY(x) > WATERY - 30 && tries++ < 40) x = Math.floor(rnd(60, W - 60));
   const item = CRATE_ITEMS[Math.floor(Math.random() * CRATE_ITEMS.length)];
@@ -1106,6 +1113,8 @@ function spawnCrate() {
   sfx('plane', (W + 180) / 2.6 / 60, dir);
   return true;
 }
+// chance per turn and the minimum number of turns between two crates
+const CRATE_RATE = { aus: { p: 0, gap: 99 }, selten: { p: 0.12, gap: 3 }, normal: { p: 0.25, gap: 2 }, oft: { p: 0.45, gap: 1 } };
 function stepPlanes() {
   for (let i = G.planes.length - 1; i >= 0; i--) {
     const p = G.planes[i];
@@ -1415,7 +1424,9 @@ function startTurn() {
   setPhase('aim');
   G.timeLeft = G.turnTime * 60;
   if (G.sudden) G.waterGoal = Math.max(80, G.waterGoal - SD_RISE);
-  const crate = Math.random() < 0.5 && spawnCrate();
+  const cr = CRATE_RATE[G.crateRate] || CRATE_RATE.normal;
+  const crate = G.turnNo - G.lastCrate >= cr.gap && Math.random() < cr.p && spawnCrate();
+  if (crate) G.lastCrate = G.turnNo;
   if (G.sdNews) toast('Sudden Death: ' + (theme.liquid === 'Lava' ? 'Die Lava' : 'Das Wasser') + ' steigt jetzt jeden Zug');
   else toast((G.cpu[G.team] || NET.mode === 'host' ? G.teams[G.team] + ': ' : '') + G.cur.name + ' ist dran' + (crate ? ' · Eine Kiste fällt' : ''));
   G.sdNews = false;
@@ -1474,11 +1485,13 @@ function startGame() {
   try {
     localStorage.setItem('wurm-names', JSON.stringify([0, 1, 2, 3].map((i) => $('n' + i).value.trim())));
     localStorage.setItem('wurm-setup', JSON.stringify({ n: G.n, cpu: [0, 1, 2, 3].map((i) => $('who' + i).dataset.cpu === '1'), land: lid, time: G.turnTime,
-      mode: G.n >= 3 ? (teamMode ? 'teams' : 'ffa') : undefined, ally: [0, 1, 2, 3].map((i) => +$('ally' + i).dataset.a) }));
+      mode: G.n >= 3 ? (teamMode ? 'teams' : 'ffa') : undefined, crates: (document.querySelector('#crates .on') || { dataset: { c: 'normal' } }).dataset.c, ally: [0, 1, 2, 3].map((i) => +$('ally' + i).dataset.a) }));
   } catch (e) { /* optional */ }
   const on = document.querySelector('#per .on');
   G.per = on ? +on.dataset.per : 3;
   theme = THEMES.find((t) => t.id === lid) || THEMES[Math.floor(Math.random() * THEMES.length)];
+  const cb = document.querySelector('#crates .on');
+  G.crateRate = cb ? cb.dataset.c : 'normal'; G.lastCrate = -9;
   WATERY = H - 40; G.waterGoal = WATERY; G.turnNo = 0; G.sudden = false; G.ai = null;
   genTerrain(); makeWorms(); placeHazards();
   G.bubbles = []; G.sayQ = []; G.graves = [];
@@ -1685,12 +1698,50 @@ function aiSearch(ai, w) {
   ai.step++;
   return deg >= 85;
 }
+// a crate on the ground that the worm can walk to: no water, no mine, no wall too high, no deadly drop on the way
+function aiCrate(w) {
+  const ok = (c) => {
+    if (c.chute || Math.abs(c.x - w.x) > 260 || Math.abs(c.y - w.y) > 70) return false;
+    const dir = Math.sign(c.x - w.x) || 1;
+    let prev = surfaceY(Math.round(w.x));
+    for (let x = w.x + dir * 8; dir > 0 ? x < c.x : x > c.x; x += dir * 8) {
+      const y = surfaceY(clamp(Math.round(x), 0, W - 1));
+      if (y > WATERY - 14 || prev - y > 22 || y - prev > 70) return false;
+      if (G.mines.some((m) => Math.abs(m.x - x) < 16 && Math.abs(m.y - y) < 20)) return false;
+      prev = y;
+    }
+    return true;
+  };
+  // hurt worms go for first aid first
+  const hpFirst = w.hp <= 70;
+  return G.crates.filter(ok).sort((a, b) => {
+    const pa = hpFirst && a.type === 'hp' ? 0 : 1, pb = hpFirst && b.type === 'hp' ? 0 : 1;
+    return pa - pb || Math.abs(a.x - w.x) - Math.abs(b.x - w.x);
+  })[0] || null;
+}
 function aiTick(w) {
   let ai = G.ai;
   if (!ai) ai = G.ai = { mode: 'wait', t: 40, step: 0, cands: [], walks: 0, plan: null };
   w.walk = 0;
   if (G.phase !== 'aim') return;
-  if (ai.mode === 'wait') { if (--ai.t <= 0) ai.mode = 'think'; return; }
+  if (ai.mode === 'wait') {
+    if (--ai.t > 0) return;
+    ai.crate = aiCrate(w);
+    if (ai.crate) { ai.mode = 'fetch'; ai.t = 360; ai.lx = w.x; ai.stuck = 0; } else ai.mode = 'think';
+    return;
+  }
+  if (ai.mode === 'fetch') {
+    // walk to the crate, hop over bumps, give up when it takes too long or time runs short
+    const c = ai.crate, dx = c.x - w.x;
+    if (G.crates.indexOf(c) < 0 || --ai.t <= 0 || G.timeLeft < 12 * 60 || (Math.abs(dx) < 3 && w.ground)) { ai.mode = 'think'; ai.cands = []; ai.step = 0; return; }
+    const dir = Math.sign(dx);
+    if (surfaceY(clamp(Math.round(w.x + dir * 14), 0, W - 1)) > WATERY - 12) { ai.mode = 'think'; return; }
+    w.walk = dir; w.face = dir;
+    if (Math.abs(w.x - ai.lx) < 0.3) ai.stuck++; else ai.stuck = 0;
+    ai.lx = w.x;
+    if (ai.stuck > 12) { jump(true); ai.stuck = 0; }
+    return;
+  }
   if (ai.mode === 'think') {
     if (!aiSearch(ai, w)) return;
     const best = ai.cands.sort((a, b) => b.s - a.s)[0];
@@ -2831,23 +2882,113 @@ function drawPlane(p) {
   ctx.fillStyle = '#2b2730'; ctx.beginPath(); ctx.arc(7, 10.5, 2.2, 0, 6.283); ctx.fill();
   // the crate hangs under the plane until it is dropped
   if (p.crate) {
-    ctx.fillStyle = p.crate.type === 'hp' ? '#f4f1ea' : '#b9823f'; ctx.fillRect(-9, 7, 9, 8);
-    ctx.strokeStyle = '#2a2018'; ctx.strokeRect(-9, 7, 9, 8);
+    ctx.save(); ctx.translate(-4.5, 11); ctx.scale(p.dir * 0.5, 0.5); drawCrateBody(p.crate); ctx.restore();
   }
   ctx.restore();
 }
-function drawCrate(c) {
-  ctx.save(); ctx.translate(c.x, c.y);
-  if (c.chute) {
-    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(-7, -8); ctx.lineTo(-14, -24); ctx.moveTo(7, -8); ctx.lineTo(14, -24); ctx.stroke();
-    ctx.fillStyle = '#f4efe6'; ctx.beginPath(); ctx.arc(0, -24, 14, Math.PI, 0); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = '#bfb7a5'; ctx.stroke();
+// what a crate holds decides its look: first aid kit, wooden explosives crate, army ammo box or blue toolbox
+const CRATE_KIND = { clu: 'boom', dyn: 'boom', min: 'boom', she: 'boom', kam: 'boom', air: 'boom', sho: 'ammo', bat: 'ammo', rop: 'tool', tel: 'tool' };
+const crateKind = (c) => (c.type === 'hp' ? 'hp' : CRATE_KIND[c.item] || 'boom');
+// a small picture of the contents, about 9 px across
+function crateIcon(id) {
+  const g = ctx;
+  g.lineCap = 'round'; g.lineJoin = 'round';
+  if (id === 'clu') {
+    g.fillStyle = '#e08a2b'; g.beginPath(); g.arc(0, 0.5, 3.4, 0, TAU); g.fill();
+    g.fillStyle = '#3b2a1a'; [[-1.2, -0.3], [1.3, -0.6], [0, 1.8]].forEach((d) => { g.beginPath(); g.arc(d[0], d[1] + 0.5, 0.7, 0, TAU); g.fill(); });
+  } else if (id === 'dyn') {
+    g.fillStyle = '#c9362a'; g.fillRect(-3.4, -2, 3, 6); g.fillRect(0.4, -2, 3, 6);
+    g.strokeStyle = '#2a2018'; g.lineWidth = 0.8; g.beginPath(); g.moveTo(0, -2); g.quadraticCurveTo(1, -4, 2.6, -4.2); g.stroke();
+    g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(3, -4.3, 1.1, 0, TAU); g.fill();
+  } else if (id === 'min') {
+    g.fillStyle = '#3b3631'; g.beginPath(); g.arc(0, 2, 3.8, Math.PI, 0); g.fill(); g.fillRect(-4.2, 2, 8.4, 1.6);
+    g.fillStyle = '#ff4d2e'; g.beginPath(); g.arc(0, -0.6, 1, 0, TAU); g.fill();
+  } else if (id === 'she') {
+    g.fillStyle = '#fbf8f0'; [[-1.6, 0.6, 2.4], [0.8, -0.2, 2.6], [-0.2, 1.6, 2.2]].forEach((d) => { g.beginPath(); g.arc(d[0], d[1], d[2], 0, TAU); g.fill(); });
+    g.fillStyle = '#2a2018'; g.beginPath(); g.arc(3.2, 0.4, 1.6, 0, TAU); g.fill();
+  } else if (id === 'kam') {
+    g.fillStyle = '#ff8a2a'; g.beginPath(); g.moveTo(0, -4.6); g.quadraticCurveTo(4, 0, 0, 4); g.quadraticCurveTo(-4, 0, 0, -4.6); g.fill();
+    g.fillStyle = '#ffe07a'; g.beginPath(); g.moveTo(0, -1); g.quadraticCurveTo(2, 1.4, 0, 3.4); g.quadraticCurveTo(-2, 1.4, 0, -1); g.fill();
+  } else if (id === 'air') {
+    g.fillStyle = '#3b3631'; g.beginPath(); g.ellipse(0, 0.8, 1.9, 3.4, 0, 0, TAU); g.fill();
+    g.fillStyle = '#d9483b'; g.beginPath(); g.moveTo(-2.4, -3.8); g.lineTo(2.4, -3.8); g.lineTo(0, -1.6); g.closePath(); g.fill();
+  } else if (id === 'sho') {
+    g.strokeStyle = '#2b2730'; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-4.2, -1.2); g.lineTo(4.4, -1.2); g.stroke();
+    g.fillStyle = '#7a4a26'; g.beginPath(); g.moveTo(-4.4, -1.6); g.lineTo(-1, -1.6); g.lineTo(-1.6, 2.8); g.lineTo(-4.4, 2.2); g.closePath(); g.fill();
+  } else if (id === 'bat') {
+    g.strokeStyle = '#a8743f'; g.lineWidth = 2.4; g.beginPath(); g.moveTo(-3, 3); g.lineTo(2.6, -2.6); g.stroke();
+    g.lineWidth = 1.1; g.beginPath(); g.moveTo(-3.8, 3.8); g.lineTo(-2.4, 2.4); g.stroke();
+  } else if (id === 'rop') {
+    g.strokeStyle = '#c8a46a'; g.lineWidth = 1.1; g.beginPath(); g.arc(-0.6, 0.8, 3, 0, TAU); g.arc(-0.6, 0.8, 1.6, 0, TAU); g.stroke();
+    g.strokeStyle = '#4a4e69'; g.lineWidth = 1; g.beginPath(); g.moveTo(2.2, -1.4); g.lineTo(3.6, -3.6); g.moveTo(3.6, -3.6); g.lineTo(4.6, -2.6); g.stroke();
+  } else if (id === 'tel') {
+    g.fillStyle = '#4fd2ff'; g.beginPath();
+    for (let i = 0; i < 8; i++) { const r = i % 2 ? 1.3 : 4.2, a = i * Math.PI / 4 - Math.PI / 2; g.lineTo(Math.cos(a) * r, Math.sin(a) * r); }
+    g.closePath(); g.fill();
+    g.fillStyle = '#fff'; g.beginPath(); g.arc(0, 0, 0.9, 0, TAU); g.fill();
   }
-  ctx.fillStyle = c.type === 'hp' ? '#f4f1ea' : '#b9823f'; ctx.fillRect(-8, -8, 16, 16);
-  if (c.type === 'hp') { ctx.fillStyle = '#d9372b'; ctx.fillRect(-2, -6, 4, 12); ctx.fillRect(-6, -2, 12, 4); }
-  else { ctx.strokeStyle = '#6b4a22'; ctx.lineWidth = 1.4; ctx.beginPath(); ctx.moveTo(-8, -8); ctx.lineTo(8, 8); ctx.moveTo(8, -8); ctx.lineTo(-8, 8); ctx.stroke(); }
-  ctx.strokeStyle = '#2a2018'; ctx.lineWidth = 1.4; ctx.strokeRect(-8, -8, 16, 16);
+}
+// crate drawn around its centre; the bottom edge sits at y = 8
+function drawCrateBody(c) {
+  const g = ctx, k = crateKind(c), line = 'rgba(40,24,14,.7)';
+  const rr = (x, y, w, h, r) => { g.beginPath(); if (g.roundRect) g.roundRect(x, y, w, h, r); else g.rect(x, y, w, h); };
+  g.lineJoin = 'round'; g.lineWidth = 1.1; g.strokeStyle = line;
+  if (k === 'hp') {
+    g.strokeStyle = '#8e8a80'; g.lineWidth = 1.6; g.beginPath(); g.arc(0, -9, 3.4, Math.PI, 0); g.stroke();
+    g.lineWidth = 1.1; g.strokeStyle = line;
+    rr(-10, -9, 20, 17, 3.5); g.fillStyle = '#f7f4ee'; g.fill(); g.stroke();
+    g.fillStyle = '#e4ded2'; g.fillRect(-9.4, -5.6, 18.8, 1.2);
+    g.fillStyle = '#d9372b'; rr(-2.2, -3.4, 4.4, 10, 0.8); g.fill(); rr(-5.2, -0.4, 10.4, 4.4, 0.8); g.fill();
+  } else if (k === 'ammo') {
+    rr(-11, -8, 22, 16, 1.6); g.fillStyle = '#66773a'; g.fill(); g.stroke();
+    g.fillStyle = '#7f9149'; g.fillRect(-10.4, -7.4, 20.8, 3.6);
+    g.fillStyle = '#e8c547'; for (let i = 0; i < 3; i++) { g.fillRect(-10.4 + i * 2.2, -2.6, 1.1, 10); g.fillRect(9.3 - i * 2.2, -2.6, 1.1, 10); }
+    g.fillStyle = '#3b4422'; g.fillRect(-1.6, -9, 3.2, 2.4);
+    g.fillStyle = '#efe6c6'; rr(-5, -2.4, 10, 8.8, 1.4); g.fill();
+  } else if (k === 'tool') {
+    g.strokeStyle = '#2b3a55'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(-3.6, -10); g.lineTo(-3.6, -12.6); g.lineTo(3.6, -12.6); g.lineTo(3.6, -10); g.stroke();
+    g.lineWidth = 1.1; g.strokeStyle = line;
+    g.fillStyle = '#5a9be6'; g.beginPath(); g.moveTo(-10, -5); g.lineTo(-7.4, -10); g.lineTo(7.4, -10); g.lineTo(10, -5); g.closePath(); g.fill(); g.stroke();
+    rr(-10, -5, 20, 13, 1.6); g.fillStyle = '#3f7fd0'; g.fill(); g.stroke();
+    g.fillStyle = '#d9dde4'; g.fillRect(-1.4, -6.2, 2.8, 2.4);
+    g.fillStyle = '#f4f1ea'; g.beginPath(); g.arc(0, 1.8, 5, 0, TAU); g.fill();
+  } else {
+    rr(-10, -10, 20, 18, 1.4); g.fillStyle = '#c4904f'; g.fill(); g.stroke();
+    g.strokeStyle = 'rgba(90,55,25,.55)'; g.lineWidth = 0.8;
+    g.beginPath(); [-4.5, 1.5].forEach((y) => { g.moveTo(-9.5, y); g.lineTo(9.5, y); }); g.stroke();
+    g.fillStyle = '#5a5550'; [[-10, -10], [7.4, -10], [-10, 5.4], [7.4, 5.4]].forEach((p) => g.fillRect(p[0], p[1], 2.6, 2.6));
+    g.fillStyle = '#c9362a'; g.fillRect(-10, -2.2, 20, 1.6);
+    g.fillStyle = '#f4ead2'; g.beginPath(); g.arc(0, -1, 5.4, 0, TAU); g.fill();
+    g.strokeStyle = 'rgba(90,55,25,.5)'; g.stroke();
+  }
+  // a darker bottom edge gives the box some volume
+  g.fillStyle = 'rgba(0,0,0,.14)'; g.fillRect(-9.5, 5.2, 19, 2.6);
+  if (k !== 'hp') {
+    g.save(); g.translate(0, k === 'tool' ? 1.8 : k === 'ammo' ? 2 : -1); crateIcon(c.item); g.restore();
+  }
+}
+function drawCrate(c) {
+  // drawn a bit larger than the pickup box, standing on the same ground line
+  ctx.save(); ctx.translate(c.x, c.y + 8); ctx.scale(1.35, 1.35); ctx.translate(0, -8);
+  if (c.chute) {
+    // striped parachute that sways a little
+    ctx.save(); ctx.rotate(Math.sin(c.age / 22) * 0.12);
+    ctx.strokeStyle = 'rgba(255,255,255,.85)'; ctx.lineWidth = 0.8;
+    ctx.beginPath(); [-9, -3, 3, 9].forEach((x, i) => { ctx.moveTo(x * 0.8, -9); ctx.lineTo([-17, -6, 6, 17][i], -26); }); ctx.stroke();
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = i % 2 ? '#f4efe6' : '#e2493a';
+      ctx.beginPath(); ctx.moveTo(0, -27); ctx.arc(0, -27, 18, Math.PI + i * Math.PI / 4, Math.PI + (i + 1) * Math.PI / 4); ctx.closePath(); ctx.fill();
+    }
+    ctx.strokeStyle = 'rgba(60,30,20,.35)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(0, -27, 18, Math.PI, TAU); ctx.closePath(); ctx.stroke();
+    ctx.restore();
+  }
+  drawCrateBody(c);
+  if (!c.chute && (c.age + c.x) % 150 < 14) {
+    // a glint so a waiting crate catches the eye
+    const k = ((c.age + c.x) % 150) / 14, s = Math.sin(k * Math.PI) * 4;
+    ctx.fillStyle = '#fffbe6';
+    ctx.beginPath(); ctx.moveTo(7, -14 - s); ctx.lineTo(8, -13); ctx.lineTo(7 + s, -12); ctx.lineTo(8, -11); ctx.lineTo(7, -10 + s); ctx.lineTo(6, -11); ctx.lineTo(7 - s, -12); ctx.lineTo(6, -13); ctx.closePath(); ctx.fill();
+  }
   ctx.restore();
 }
 function drawRope(w) {
@@ -3150,6 +3291,7 @@ $('sprobe').addEventListener('click', () => {
 function segPick(id, b) { document.querySelectorAll('#' + id + ' button').forEach((x) => x.classList.toggle('on', x === b)); }
 document.querySelectorAll('#land button').forEach((b) => b.addEventListener('click', () => segPick('land', b)));
 document.querySelectorAll('#ttime button').forEach((b) => b.addEventListener('click', () => segPick('ttime', b)));
+document.querySelectorAll('#crates button').forEach((b) => b.addEventListener('click', () => segPick('crates', b)));
 document.querySelectorAll('#mode button').forEach((b) => b.addEventListener('click', () => {
   segPick('mode', b);
   if (b.dataset.mode === 'host') openRoom(); else closeRoom();
@@ -3185,6 +3327,8 @@ try {
   updateAllyUi();
   const tb = st && document.querySelector('#ttime [data-t="' + (+st.time || 0) + '"]');
   if (tb) segPick('ttime', tb);
+  const kb = st && document.querySelector('#crates [data-c="' + st.crates + '"]');
+  if (kb) segPick('crates', kb);
   const lb = st && document.querySelector('#land [data-land="' + st.land + '"]');
   if (lb) segPick('land', lb);
   if (localStorage.getItem('wurm-mute') === '1') setMuted(true);

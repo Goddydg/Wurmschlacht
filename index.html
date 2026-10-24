@@ -285,9 +285,10 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
       <div>
         <div class="lbl">Landschaft</div>
         <div class="seg" id="land">
-          <button data-land="zufall" class="on">Zufall</button><button data-land="wiese">Wiese</button><button data-land="wueste">Wüste</button>
+          <button data-land="zufall" class="on" style="grid-column:1/-1">Zufall</button><button data-land="wiese">Wiese</button><button data-land="wueste">Wüste</button>
           <button data-land="winter">Winter</button><button data-land="inseln">Inseln</button><button data-land="vulkan">Vulkan</button>
           <button data-land="schiff">Altes Schiff</button><button data-land="suess">Süßigkeiten</button><button data-land="fantasie">Fantasiewelt</button>
+          <button data-land="fruehstueck">Frühstück</button>
         </div>
       </div>
       <button class="go" id="start">Spiel starten</button>
@@ -418,7 +419,11 @@ const THEMES = [
   { id: 'fantasie', n: 'Fantasiewelt', shape: 'fantasy', deco: 'glow', slide: 0.7, liquid: 'Zauberwasser', liq: 'Das Zauberwasser',
     sky: ['#1f1747', '#5b3a8a', '#e88fbf'], hills: ['#6a4a9e', '#4a3580'], soil: ['#5b4a8a', '#3f3270', '#261d4a'],
     speck: ['rgba(10,5,30,.3)', 'rgba(140,240,255,.22)'], edge: '#5fe0c0', edgeW: 8,
-    water: ['rgba(40,180,190,.78)', 'rgba(110,235,225,.66)'], drop: '#b8fff4', dirt: '#3f3270' }
+    water: ['rgba(40,180,190,.78)', 'rgba(110,235,225,.66)'], drop: '#b8fff4', dirt: '#3f3270' },
+  { id: 'fruehstueck', n: 'Frühstück', shape: 'table', deco: 'crumbs', slide: 0.7, liquid: 'Milch', liq: 'Die Milch',
+    sky: ['#f6e7c8', '#f3dcb4', '#ecd1a4'], hills: ['#b98a5e', '#a07448'], soil: ['#fbf7f0', '#f4ede2', '#e8dccb'],
+    speck: ['rgba(200,160,110,.35)', 'rgba(150,100,60,.25)'], edge: '#ffffff', edgeW: 3,
+    water: ['rgba(246,242,234,.93)', 'rgba(255,253,248,.88)'], drop: '#ffffff', dirt: '#d8b98a' }
 ];
 let theme = THEMES[0];
 // extra looks per landscape: sun, clouds, far mountains, weather, stones and grass tufts
@@ -430,6 +435,7 @@ const FX = {
   vulkan: { sun: '#ff7a45', glow: '255,96,40', cloud: '#4a3a40', far: '#6b3a3c', weather: 'embers', stone: '#161212', tuft: null, cracks: true },
   schiff: { sun: '#ffd89a', glow: '255,170,90', cloud: '#ffe2cc', far: '#d4977a', weather: 'none', stone: '#5a4a3a', tuft: null },
   suess: { sun: '#fff3a0', glow: '255,220,150', cloud: '#ffd3ea', far: '#fbd6e8', weather: 'sprinkles', stone: '#3a1f10', tuft: null, sprinkles: true, drips: true },
+  fruehstueck: { sun: null, glow: '255,230,170', cloud: null, far: '#c79a6a', weather: 'dust', stone: null, tuft: null, kitchen: true, gingham: true },
   fantasie: { sun: '#fdf3ff', glow: '220,190,255', cloud: '#b89ae0', far: '#7a5bb0', weather: 'fireflies', stone: '#7fe7ff', tuft: ['#5fe0c0', '#9bffe6'], stars: true, moon2: true }
 };
 const fx = () => FX[theme.id] || FX.wiese;
@@ -465,6 +471,9 @@ function groundHeight(x, ph, k) {
     // two rocky islands at the map edges, open sea in the middle where the wreck lies
     const isl = (c, w) => Math.exp(-Math.pow((x - c) / w, 4));
     h = H + 40 - 300 * isl(130, 175) - 300 * isl(W - 130, 175) + Math.sin(x / 41 + ph[1]) * 10 + Math.sin(x / 17 + ph[2]) * 3;
+  } else if (sh === 'table') {
+    // a flat table top with a few cloth wrinkles; past the edges there is only the spilled milk
+    h = e < 70 ? H + 60 : H * 0.62 + Math.sin(x / 60 + ph[0]) * 1.5 + Math.sin(x / 23 + ph[1]) * 0.8;
   } else if (sh === 'candy') {
     // round gumdrop hills, two valleys, the edges melt into the cocoa
     h = H * 0.58 + Math.sin(x / 170 + ph[0]) * 26 + Math.sin(x / 45 + ph[2]) * 5;
@@ -490,7 +499,7 @@ function keyPoints() {
   if (sh === 'peaks') return [rnd(560, 840)];
   if (sh === 'islands') return [rnd(300, 380), rnd(660, 740), rnd(1020, 1100)];
   if (sh === 'volcano') return [rnd(180, 260), rnd(1140, 1220)];
-  if (sh === 'ship') return [];
+  if (sh === 'ship' || sh === 'table') return [];
   if (sh === 'fantasy') return [rnd(500, 600), rnd(1080, 1160)];
   return [rnd(380, 560), rnd(840, 1020)];
 }
@@ -921,6 +930,117 @@ function rainbow(br) {
   post.push(() => { [line[2], line[line.length - 3]].forEach((p) => { [[-10, 18, 10], [4, 14, 12], [16, 20, 9]].forEach((c) => S.circ(p[0] + c[0], p[1] + c[1], c[2], 'rgba(255,255,255,.9)')); }); });
 }
 
+/* Frühstück: giant breakfast things on a checked tablecloth */
+function coffeeCup(x) {
+  const y = hs[x] + 2;
+  S.ell(x, y - 3, 66, 10, 0, '#d8dee3'); S.ell(x, y - 6, 62, 8, 0, '#fbfbf8');
+  const body = S.quad([x - 38, y - 104], [x - 40, y - 20], [x - 22, y - 10], 10).concat(S.quad([x + 22, y - 10], [x + 40, y - 20], [x + 38, y - 104], 10));
+  // the handle is a ring the rope can hook into
+  tctx.beginPath(); tctx.arc(x + 44, y - 62, 22, -Math.PI * 0.45, Math.PI * 0.45); tctx.strokeStyle = '#d8dee3'; tctx.lineWidth = 12; tctx.lineCap = 'round'; tctx.stroke();
+  tctx.strokeStyle = '#fbfbf8'; tctx.lineWidth = 8; tctx.stroke();
+  S.poly(body, '#fbfbf8', '#c9cfd4', 1.5);
+  S.clipTo(body, () => {
+    tctx.fillStyle = '#2e86de'; tctx.fillRect(x - 45, y - 82, 90, 10);
+    for (let i = 0; i < 7; i++) S.circ(x - 30 + i * 10, y - 52 + (i % 2) * 10, 3, '#e4572e');
+    const sh = tctx.createLinearGradient(x - 40, 0, x + 40, 0); sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(60,70,90,.18)');
+    tctx.fillStyle = sh; tctx.fillRect(x - 45, y - 110, 90, 110);
+  });
+  S.ell(x, y - 104, 38, 7, 0, '#e6e9ec'); S.ell(x, y - 104, 33, 5.5, 0, '#5a3a22'); S.ell(x - 8, y - 105, 10, 1.6, 0, 'rgba(255,240,220,.35)');
+  post.push(() => {
+    tctx.strokeStyle = 'rgba(255,255,255,.55)'; tctx.lineWidth = 3; tctx.lineCap = 'round';
+    for (let i = -1; i <= 1; i++) { const sx = x + i * 14; S.path([[sx, y - 112], [sx - 6, y - 128], [sx + 4, y - 142], [sx - 3, y - 158]]); tctx.stroke(); }
+  });
+}
+function croissant(x) {
+  const y = hs[x] + 4, rx = 72, ry = 62, outer = [], inner = [];
+  for (let i = 0; i <= 24; i++) { const a = Math.PI + i / 24 * Math.PI; outer.push([x + Math.cos(a) * rx, y + Math.sin(a) * ry]); }
+  for (let i = 24; i >= 0; i--) { const a = Math.PI + i / 24 * Math.PI; inner.push([x + Math.cos(a) * rx * 0.52, y + Math.sin(a) * ry * 0.5]); }
+  const pts = outer.concat(inner);
+  S.poly(pts, '#e3a64a', '#a8692a', 1.6);
+  S.clipTo(pts, () => {
+    tctx.strokeStyle = 'rgba(150,80,20,.45)'; tctx.lineWidth = 2.4;
+    for (let i = 1; i < 7; i++) { const a = Math.PI + i / 7 * Math.PI; S.path([[x + Math.cos(a) * rx * 0.5, y + Math.sin(a) * ry * 0.48], [x + Math.cos(a) * rx * 1.05, y + Math.sin(a) * ry * 1.05]]); tctx.stroke(); }
+    S.ell(x - 20, y - ry * 0.85, 28, 7, -0.2, 'rgba(255,240,200,.4)');
+  });
+  tops.push(outer.slice(4, 21));
+}
+function cheese(x) {
+  const y = hs[x] + 2, pts = [[x - 64, y], [x + 64, y], [x + 64, y - 78], [x - 64, y - 34]];
+  S.poly(pts, '#ffcf4a', '#d49a1a', 1.6);
+  S.poly([[x - 64, y - 34], [x + 64, y - 78], [x + 58, y - 84], [x - 66, y - 38]], '#ffe07a', '#d49a1a', 1.2);
+  // holes, one big enough to crawl through at the bottom
+  S.hollow([[x - 18, y + 1], [x - 18, y - 12], [x - 10, y - 24], [x + 4, y - 26], [x + 14, y - 16], [x + 16, y + 1]], '#d49a1a');
+  [[x + 36, y - 40, 9], [x - 40, y - 18, 6], [x + 10, y - 54, 7], [x + 46, y - 12, 5]].forEach((h) => {
+    const c = []; for (let i = 0; i < 10; i++) { const a = i / 10 * TAU; c.push([h[0] + Math.cos(a) * h[2], h[1] + Math.sin(a) * h[2] * 0.9]); }
+    S.hollow(c, '#d49a1a');
+  });
+}
+function eggCup(x) {
+  const y = hs[x] + 2, blue = '#3f7fd0';
+  S.ell(x, y - 4, 30, 7, 0, blue);
+  S.poly([[x - 8, y - 6], [x + 8, y - 6], [x + 6, y - 30], [x - 6, y - 30]], blue);
+  const bowl = []; for (let i = 0; i <= 14; i++) { const a = i / 14 * Math.PI; bowl.push([x + Math.cos(a) * 30, y - 30 - Math.sin(a) * 6 - 0]); }
+  S.poly([[x - 32, y - 64], [x + 32, y - 64], [x + 26, y - 40], [x + 10, y - 30], [x - 10, y - 30], [x - 26, y - 40]], blue, '#2b5a99', 1.4);
+  for (let i = 0; i < 5; i++) S.circ(x - 20 + i * 10, y - 50 + (i % 2) * 6, 2.6, '#fff');
+  S.ell(x, y - 92, 24, 33, 0, '#f6ead4'); S.ell(x - 8, y - 104, 6, 10, -0.3, 'rgba(255,255,255,.6)');
+  // the top is cut off: a zigzag edge and a runny yolk
+  S.poly([[x - 21, y - 112], [x - 14, y - 118], [x - 7, y - 112], [x, y - 119], [x + 7, y - 112], [x + 14, y - 118], [x + 21, y - 112], [x + 18, y - 104], [x - 18, y - 104]], '#fffaf0');
+  S.ell(x, y - 113, 11, 4, 0, '#ffc21a');
+  tops.push([[x - 20, y - 114], [x + 20, y - 114]]);
+}
+function jamJar(x) {
+  const y = hs[x] + 2, jar = [[x - 30, y], [x - 34, y - 12], [x - 34, y - 76], [x - 28, y - 84], [x + 28, y - 84], [x + 34, y - 76], [x + 34, y - 12], [x + 30, y]];
+  S.poly(jar, '#f3d7db', '#c9a3a9', 1.5);
+  S.clipTo(jar, () => {
+    tctx.fillStyle = '#c2223a'; tctx.fillRect(x - 40, y - 70, 80, 72);
+    for (let i = 0; i < 8; i++) S.circ(x + rnd(-26, 26), y - rnd(8, 62), rnd(2, 4), 'rgba(255,120,140,.5)');
+    tctx.fillStyle = 'rgba(255,255,255,.35)'; tctx.fillRect(x - 26, y - 80, 7, 74);
+    tctx.fillStyle = '#fbf4e2'; tctx.fillRect(x - 22, y - 52, 44, 24);
+    S.circ(x, y - 40, 7, '#e0313b'); S.poly([[x - 4, y - 47], [x, y - 44], [x + 4, y - 47], [x, y - 50]], '#4f9a40');
+  });
+  const lid = [[x - 38, y - 84], [x + 38, y - 84], [x + 32, y - 100], [x - 32, y - 100]];
+  S.poly(lid, '#f6f1e6', '#c9b8a0', 1.2);
+  S.clipTo(lid, () => { for (let i = -40; i < 40; i += 8) { tctx.fillStyle = 'rgba(214,40,50,.45)'; tctx.fillRect(x + i, y - 104, 4, 24); tctx.fillRect(x - 40, y - 100 + ((i + 40) % 16), 80, 0); } tctx.fillStyle = 'rgba(214,40,50,.45)'; tctx.fillRect(x - 40, y - 96, 80, 4); tctx.fillRect(x - 40, y - 88, 80, 4); });
+  S.band([[x - 34, y - 86], [x + 34, y - 86]], 2, '#8a6a40');
+  tops.push([[x - 30, y - 100], [x + 30, y - 100]]);
+}
+function toaster(x) {
+  const y = hs[x] + 2, body = [[x - 58, y - 4], [x - 60, y - 64], [x - 52, y - 74], [x + 52, y - 74], [x + 60, y - 64], [x + 58, y - 4]];
+  // toast slices pop out of the slots
+  [[-24, -0.08], [22, 0.1]].forEach((t) => {
+    tctx.save(); tctx.translate(x + t[0], y - 92); tctx.rotate(t[1]);
+    S.poly([[-22, 30], [-22, -10], [-16, -18], [16, -18], [22, -10], [22, 30]], '#b8743a');
+    S.poly([[-18, 30], [-18, -8], [-13, -14], [13, -14], [18, -8], [18, 30]], '#f0c987');
+    tctx.restore();
+  });
+  S.poly(body, '#c9ccd2', '#8f949c', 1.6);
+  S.clipTo(body, () => {
+    const g = tctx.createLinearGradient(x - 60, 0, x + 60, 0); g.addColorStop(0, 'rgba(255,255,255,.45)'); g.addColorStop(0.4, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(40,45,55,.25)');
+    tctx.fillStyle = g; tctx.fillRect(x - 62, y - 80, 124, 80);
+    tctx.fillStyle = '#e4572e'; tctx.fillRect(x - 62, y - 24, 124, 6);
+  });
+  S.band([[x - 44, y - 74], [x - 6, y - 74]], 4, '#3b3f46'); S.band([[x + 4, y - 74], [x + 42, y - 74]], 4, '#3b3f46');
+  S.poly([[x + 58, y - 52], [x + 70, y - 52], [x + 70, y - 44], [x + 58, y - 44]], '#2b2730');
+  S.circ(x - 30, y - 40, 5, '#3b3f46');
+  tops.push([[x - 56, y - 74], [x + 56, y - 74]]);
+}
+function breadLoaf(x) {
+  const y = hs[x] + 4, loaf = [];
+  for (let i = 0; i <= 20; i++) { const a = Math.PI + i / 20 * Math.PI; loaf.push([x + Math.cos(a) * 66, y + Math.sin(a) * 58]); }
+  S.poly(loaf, '#b8743a', '#7a4a22', 1.6);
+  S.clipTo(loaf, () => {
+    tctx.strokeStyle = 'rgba(255,220,170,.55)'; tctx.lineWidth = 3;
+    [-30, -6, 18].forEach((d) => { S.path([[x + d - 10, y - 42], [x + d + 10, y - 56]]); tctx.stroke(); });
+    S.ell(x - 20, y - 44, 26, 8, -0.3, 'rgba(255,230,180,.25)');
+  });
+  // a slice leans against the loaf and leaves a gap underneath
+  tctx.save(); tctx.translate(x + 74, y - 2); tctx.rotate(-0.42);
+  S.poly([[0, 0], [0, -66], [6, -74], [40, -74], [46, -66], [46, 0]], '#b8743a');
+  S.poly([[4, -2], [4, -64], [9, -70], [37, -70], [42, -64], [42, -2]], '#f3dcae');
+  for (let i = 0; i < 10; i++) S.circ(rnd(10, 36), rnd(-60, -8), rnd(1, 2), 'rgba(180,130,70,.5)');
+  tctx.restore();
+  tops.push(loaf.slice(3, 18));
+}
 // which structures each landscape builds
 const BUILD = {
   wiese(ph, k) {
@@ -968,6 +1088,12 @@ const BUILD = {
     spots(2, 150, (x) => hs[x] < WATERY - 150 && flatAt(x, 12) < 14).forEach(giantMushroom);
     spots(2, 140, (x) => hs[x] < WATERY - 90 && Math.abs(slopeAt(x)) > 30).forEach((x) => crystals(x, slopeAt(x) > 0 ? 1 : -1));
   }
+};
+BUILD.fruehstueck = function () {
+  // the cup is always on the table, four other things in random order beside it
+  const things = [coffeeCup].concat([croissant, cheese, eggCup, jamJar, toaster, breadLoaf].sort(() => Math.random() - 0.5).slice(0, 4)).sort(() => Math.random() - 0.5);
+  const gap = (W - 380) / things.length;
+  things.forEach((f, i) => { const x = Math.round(190 + gap * (i + 0.5) + rnd(-25, 25)); sused.push(x); f(x); });
 };
 function buildStructures(ph, k) {
   tops = []; post = []; sused = [];
@@ -1058,6 +1184,11 @@ function decorate() {
       } else {
         tctx.fillStyle = '#e0313b'; tctx.beginPath(); tctx.moveTo(0, -1); tctx.bezierCurveTo(-8, -7, -4, -13, 0, -9); tctx.bezierCurveTo(4, -13, 8, -7, 0, -1); tctx.fill();
       }
+    } else if (kind === 'crumbs') {
+      if (i % 4 === 0) { tctx.fillStyle = '#ffffff'; tctx.fillRect(-5, -10, 10, 10); tctx.strokeStyle = '#ddd5c8'; tctx.lineWidth = 0.8; tctx.strokeRect(-5, -10, 10, 10); }
+      else if (i % 4 === 1) { tctx.fillStyle = '#5a3a22'; tctx.beginPath(); tctx.ellipse(0, -3, 4.5, 3, 0.3, 0, 6.283); tctx.fill(); tctx.strokeStyle = '#2b1a0e'; tctx.lineWidth = 0.8; tctx.beginPath(); tctx.moveTo(-3, -4); tctx.lineTo(3, -2); tctx.stroke(); }
+      else if (i % 4 === 2) { tctx.fillStyle = '#4a3a8a'; tctx.beginPath(); tctx.arc(0, -4, 4.5, 0, 6.283); tctx.fill(); tctx.fillStyle = 'rgba(255,255,255,.4)'; tctx.beginPath(); tctx.arc(-1.5, -5.5, 1.2, 0, 6.283); tctx.fill(); }
+      else { tctx.fillStyle = '#d8b98a'; [[-6, -1.5, 2], [-1, -2, 2.6], [4, -1, 1.6], [8, -1.5, 1.2]].forEach((c) => { tctx.beginPath(); tctx.arc(c[0], c[1], c[2], 0, 6.283); tctx.fill(); }); }
     } else if (kind === 'glow') {
       tctx.fillStyle = 'rgba(255,255,220,.25)'; tctx.beginPath(); tctx.arc(0, -9, 10, 0, 6.283); tctx.fill();
       tctx.fillStyle = '#efe6d6'; tctx.fillRect(-1.5, -9, 3, 9);
@@ -1091,6 +1222,13 @@ function genTerrain() {
     tctx.fillStyle = theme.speck[Math.random() < 0.5 ? 0 : 1];
     tctx.beginPath(); tctx.arc(rnd(0, W), rnd(H * 0.3, H), rnd(1.5, 5), 0, 6.283); tctx.fill();
   }
+  if (fx().gingham) {
+    // a red and white checked tablecloth
+    tctx.fillStyle = 'rgba(214,40,50,.32)';
+    for (let gx = 0; gx < W; gx += 32) tctx.fillRect(gx, 0, 16, H);
+    for (let gy = Math.round(H * 0.62) % 32; gy < H; gy += 32) tctx.fillRect(0, gy, W, 16);
+    tctx.fillStyle = 'rgba(255,255,255,.5)'; tctx.fillRect(0, H * 0.62 + 16, W, 3);
+  }
   if (theme.shape === 'mesa') {
     // sandstone layers
     tctx.fillStyle = 'rgba(120,60,20,.13)';
@@ -1098,7 +1236,7 @@ function genTerrain() {
   }
   const F = fx();
   // stones in the ground, each with a lit top edge
-  for (let i = 0; i < 70; i++) {
+  for (let i = 0; i < (F.stone ? 70 : 0); i++) {
     const x = rnd(0, W), y = rnd(hs[Math.floor(x)] + 30, H), rx = rnd(3, 9), ry = rx * rnd(0.55, 0.8), rot = rnd(-0.5, 0.5);
     tctx.fillStyle = F.stone; tctx.globalAlpha = 0.55;
     tctx.beginPath(); tctx.ellipse(x, y, rx, ry, rot, 0, 6.283); tctx.fill();
@@ -1133,7 +1271,8 @@ function genTerrain() {
   tctx.globalCompositeOperation = 'source-over';
   buildStructures(ph, k);
   tctx.globalCompositeOperation = 'destination-out';
-  for (let c = 0; c < 3; c++) {
+  // tunnels through the ground, but not through the tablecloth
+  for (let c = 0; c < (theme.shape === 'table' ? 0 : 3); c++) {
     let cx = rnd(160, W - 160), cy = hs[Math.floor(cx)] + rnd(90, 140);
     for (let i = 0; i < 12; i++) {
       tctx.beginPath(); tctx.arc(cx, cy, rnd(13, 20), 0, 6.283); tctx.fill();
@@ -2979,7 +3118,7 @@ function cloudSprite(col) {
 }
 function initAmbient() {
   const F = fx();
-  cloudImg = cloudSprite(F.cloud);
+  cloudImg = F.cloud ? cloudSprite(F.cloud) : null;
   G.clouds = [];
   for (let i = 0; i < 7; i++) G.clouds.push({ x: rnd(0, 2400), y: rnd(0.04, 0.36), s: rnd(0.5, 1.15), par: rnd(0.08, 0.3), a: rnd(0.6, 0.95) });
   G.amb = [];
@@ -3029,7 +3168,26 @@ function skyImage() {
   const gl = g.createRadialGradient(sx, sy, sr * 0.6, sx, sy, sr * 4.2);
   gl.addColorStop(0, 'rgba(' + F.glow + ',.55)'); gl.addColorStop(1, 'rgba(' + F.glow + ',0)');
   g.fillStyle = gl; g.fillRect(sx - sr * 4.2, sy - sr * 4.2, sr * 8.4, sr * 8.4);
-  g.fillStyle = F.sun; g.beginPath(); g.arc(sx, sy, sr, 0, 6.283); g.fill();
+  if (F.sun) { g.fillStyle = F.sun; g.beginPath(); g.arc(sx, sy, sr, 0, 6.283); g.fill(); }
+  if (F.kitchen) {
+    // kitchen wall: soft stripes, a window with checked curtains and a clock
+    g.fillStyle = 'rgba(255,255,255,.18)'; for (let x = 0; x < cw; x += 28) g.fillRect(x, 0, 12, ch);
+    const wx = cw * 0.18, wy = ch * 0.08, ww = Math.min(cw * 0.34, 260), wh = ch * 0.34;
+    const sky = g.createLinearGradient(0, wy, 0, wy + wh); sky.addColorStop(0, '#8fcbe8'); sky.addColorStop(1, '#d9f0f8');
+    g.fillStyle = '#fbf8f0'; g.fillRect(wx - 8, wy - 8, ww + 16, wh + 16);
+    g.fillStyle = sky; g.fillRect(wx, wy, ww, wh);
+    g.fillStyle = '#ffffff'; g.beginPath(); g.arc(wx + ww * 0.3, wy + wh * 0.4, wh * 0.12, 0, 6.283); g.arc(wx + ww * 0.42, wy + wh * 0.36, wh * 0.15, 0, 6.283); g.arc(wx + ww * 0.55, wy + wh * 0.42, wh * 0.11, 0, 6.283); g.fill();
+    g.fillStyle = '#fbf8f0'; g.fillRect(wx + ww / 2 - 4, wy, 8, wh); g.fillRect(wx, wy + wh / 2 - 4, ww, 8);
+    [[wx - 26, 1], [wx + ww - 10, -1]].forEach((c) => {
+      g.fillStyle = '#f6f1e6'; g.fillRect(c[0], wy - 16, 36, wh + 30);
+      g.fillStyle = 'rgba(214,40,50,.4)'; for (let y = wy - 16; y < wy + wh + 14; y += 12) g.fillRect(c[0], y, 36, 6);
+      for (let x = c[0]; x < c[0] + 36; x += 12) g.fillRect(x, wy - 16, 6, wh + 30);
+    });
+    g.fillStyle = '#8a6440'; g.fillRect(wx - 40, wy - 22, ww + 80, 6);
+    const cx = cw * 0.8, cy = ch * 0.18, cr = Math.min(cw, ch) * 0.06;
+    g.fillStyle = '#fbf8f0'; g.strokeStyle = '#4a3a2a'; g.lineWidth = 3; g.beginPath(); g.arc(cx, cy, cr, 0, 6.283); g.fill(); g.stroke();
+    g.lineWidth = 2; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx, cy - cr * 0.7); g.moveTo(cx, cy); g.lineTo(cx + cr * 0.5, cy + cr * 0.15); g.stroke();
+  }
   if (F.stars) {
     // a starry sky and a second, smaller moon
     for (let i = 0; i < 110; i++) { g.globalAlpha = rnd(0.3, 0.95); g.fillStyle = '#fffbea'; g.beginPath(); g.arc(rnd(0, cw), rnd(0, ch * 0.62), rnd(0.4, 1.4), 0, 6.283); g.fill(); }
@@ -3043,7 +3201,7 @@ function skyImage() {
 function drawSky() {
   const F = fx(), m = Math.min(cw, ch);
   ctx.drawImage(skyImage(), 0, 0, cw, ch);
-  if (cloudImg) {
+  if (cloudImg && F.cloud) {
     const span = cw + 500;
     G.clouds.forEach((c) => {
       const w = 200 * c.s * clamp(m / 500, 0.7, 1.6), h = w / 2;
@@ -3051,6 +3209,15 @@ function drawSky() {
       ctx.globalAlpha = c.a; ctx.drawImage(cloudImg, x, ch * c.y, w, h);
     });
     ctx.globalAlpha = 1;
+  }
+  if (F.kitchen) {
+    // kitchen cabinets behind the table instead of hills
+    const top = ch * 0.62, off = (G.cam.x * scale * 0.15) % 120;
+    ctx.fillStyle = theme.hills[0]; ctx.fillRect(0, top, cw, ch - top);
+    ctx.fillStyle = '#8a6440'; ctx.fillRect(0, top - 8, cw, 10);
+    ctx.strokeStyle = theme.hills[1]; ctx.lineWidth = 3;
+    for (let x = -off; x < cw + 120; x += 120) { ctx.strokeRect(x + 8, top + 14, 104, ch - top - 20); ctx.fillStyle = '#d9c8a8'; ctx.fillRect(x + 92, top + 50, 6, 26); }
+    return;
   }
   hills(F.far, ch * 0.58, 34, 0.05, 170);
   hills(theme.hills[0], ch * 0.64, 22, 0.12, 120);

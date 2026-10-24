@@ -86,6 +86,7 @@ Im Startmenü wählst du eine von neun Landschaften oder lässt den Zufall entsc
 | Altes Schiff | zwei Felsinseln im Abendlicht | gestrandetes Piratenschiff mit drei Masten, Rahen, zerrissenen Segeln, Ausguck, Bugspriet und einem Loch im Rumpf, durch das man ins Schiff klettern kann |
 | Süßigkeiten | Schokoladenhügel mit Zuckerguss | Zuckerstangen, Lollis, schwebender Keks, Waffelbrücke, Streusel fallen vom Himmel; Kakao statt Wasser |
 | Fantasiewelt | Hügel mit Felsnadeln unter Sternenhimmel und zwei Monden | Riesenpilze, leuchtende Kristalle, schwebende Insel mit Wasserfall, Regenbogenbrücke, Glühwürmchen; Zauberwasser |
+| Frühstück | ein gedeckter Tisch mit karierter Tischdecke in der Küche | riesige Kaffeetasse mit Henkel, Croissant als Tunnel, Käse mit Löchern zum Durchkriechen, Ei im Eierbecher, Marmeladenglas, Toaster mit Toast, Brotlaib mit angelehnter Scheibe; wer vom Tisch fällt, landet in der Milch |
 
 Kleine Deko wie Bäume, Kakteen, Muscheln oder Bonbons hält nichts auf und wird mit dem Gelände weggesprengt.
 

@@ -1,6 +1,6 @@
 # Wurmschlacht
 
-Rundenbasiertes Artillerie-Spiel für drei Spieler an einem Handy. Die Würmer kämpfen auf zerstörbarem Gelände, mit Wind, zwölf Waffen, Kisten, Minen und Ölfässern. Wer als Letzter noch einen Wurm hat, gewinnt.
+Rundenbasiertes Artillerie-Spiel für zwei bis vier Spieler an einem Handy, auch gegen den Computer. Die Würmer kämpfen auf zerstörbarem Gelände, mit Wind, zwölf Waffen, Kisten, Minen und Ölfässern. Wer als Letzter noch einen Wurm hat, gewinnt.
 
 Das Spiel ist eine einzige Datei (`index.html`) ohne Build-Schritt und ohne Abhängigkeiten. Nur die beiden Schriften kommen von Google Fonts. Ohne Netz läuft es mit Ersatzschriften.
 
@@ -19,6 +19,8 @@ Mit GitHub Pages lässt es sich als Webseite bereitstellen: In den Repo-Einstell
 | Sprung | Springen, am Seil loslassen |
 | Waffenleiste | Waffenmenü öffnen, nur während des Zielens |
 | Feuer | Bazooka, Granate und Clusterbombe: halten für Kraft, loslassen zum Schießen. Alle anderen Waffen: antippen |
+
+**Ton:** Der Knopf mit dem Lautsprecher am rechten Rand schaltet die Geräusche aus und wieder an. Die Einstellung bleibt gespeichert.
 
 **Zoomen und Verschieben:** Zwei Finger auseinander oder zusammen ziehen zoomt, ein Finger verschiebt die Ansicht, am Rechner zoomt das Mausrad. Die Knöpfe `+` und `−` am rechten Rand zoomen schrittweise, der Knopf mit dem Fadenkreuz springt zurück zum aktiven Wurm. Der Knopf `Karte` oben links zeigt das ganze Spielfeld.
 
@@ -53,8 +55,16 @@ Tastatur am Rechner: Pfeiltasten, `J` für Sprung, Leertaste für Feuer.
 
 ## Ablauf
 
-Die Teams sind abwechselnd dran, pro Zug gibt es 30 Sekunden. Nach dem Schuss bleibt kurz Zeit zum Rückzug. Danach erscheint die Übergabe an das nächste Team. Würmer, die ins Wasser fallen, scheiden aus. Zu Beginn wählst du 2, 3 oder 4 Würmer pro Team.
+Zu Beginn wählst du 2, 3 oder 4 Spieler, für jeden Spieler *Mensch* oder *Computer*, und 2, 3 oder 4 Würmer pro Team.
+
+Die Teams sind abwechselnd dran, pro Zug gibt es 30 Sekunden. Nach dem Schuss bleibt kurz Zeit zum Rückzug. Danach erscheint die Übergabe an das nächste Team. Die Übergabe entfällt, wenn der Computer dran ist oder nur noch ein Mensch mitspielt. Würmer, die ins Wasser fallen, scheiden aus.
+
+**Sudden Death:** Nach sechs Runden steigt das Wasser zu Beginn jedes Zugs ein Stück. Tief liegende Würmer müssen nach oben, sonst ertrinken sie.
+
+## Computer-Gegner
+
+Der Computer spielt Bazooka, Granate und Schrotflinte. Er rechnet vor dem Schuss viele Winkel und Stärken mit derselben Physik durch, die auch das Spiel nutzt, und berücksichtigt dabei Wind, Abpraller und Ölfässer. Treffer am eigenen Team vermeidet er. Damit er nicht perfekt trifft, streut er Winkel und Kraft ein wenig. Findet er kein lohnendes Ziel, läuft er auf den nächsten Gegner zu und sucht erneut.
 
 ## Aufbau
 
-Alles steckt in `index.html`: Stil, Markup und Spiellogik (Canvas). Die Spielfeldgröße, die Waffentabelle (`WEAPONS`) und die Teamfarben (`COL`) stehen am Anfang des Skripts.
+Alles steckt in `index.html`: Stil, Markup und Spiellogik (Canvas). Die Spielfeldgröße, die Waffentabelle (`WEAPONS`), die Teamfarben (`COL`) und die Sudden-Death-Werte (`SD_ROUNDS`, `SD_RISE`) stehen am Anfang des Skripts. Der Computer-Gegner steckt im Abschnitt `computer player`, die Geräusche werden im Abschnitt `sound` mit der Web Audio API erzeugt, ohne Audiodateien.

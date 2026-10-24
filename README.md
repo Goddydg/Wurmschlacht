@@ -74,19 +74,20 @@ Jeder Wurm ist ein eigener Charakter. Er hat einen Namen, eine Persönlichkeit (
 
 ## Landschaften
 
-Im Startmenü wählst du die Landschaft oder lässt den Zufall entscheiden.
+Im Startmenü wählst du eine von neun Landschaften oder lässt den Zufall entscheiden. Jede hat eigene Bauwerke und Überhänge, an denen sich das Ninja-Seil einhaken lässt. Man kann auf ihnen stehen, und sie lassen sich wegsprengen.
 
-| Landschaft | Gelände | Besonderheit |
+| Landschaft | Gelände | Überhänge und Besonderheiten |
 | --- | --- | --- |
-| Wiese | sanfte Hügel, zwei Schluchten | Bäume |
-| Wüste | Dünen und zwei Tafelberge | Kakteen, Felswände am Rand |
-| Winter | spitze Grate, eine tiefe Kluft | Schnee, die Würmer rutschen auf dem Eis nach |
-| Inseln | vier Inseln im Meer | Palmen, viel Wasser |
-| Vulkan | ein großer Kegel mit Krater | Lava statt Wasser, Lavagruben an den Seiten |
+| Wiese | sanfte Hügel, zwei Schluchten | riesige alte Eiche mit Schaukel, umgestürzter Baumstamm als Brücke, bemooster Felsvorsprung mit Efeu |
+| Wüste | Dünen und zwei Tafelberge | Pilzfelsen, geschichteter Steinbogen, Riesenkaktus mit Armen |
+| Winter | spitze Grate, eine tiefe Kluft | Eisbrücke, Schneewechten mit Eiszapfen, große verschneite Tanne; die Würmer rutschen auf dem Eis nach |
+| Inseln | vier Inseln im Meer | Palmen, die sich übers Wasser neigen, Felsentore zwischen den Inseln |
+| Vulkan | großer Kegel, Lavagruben | Totenkopf-Felsen mit glühenden Augen, Lavabrücken, Felsvorsprünge mit tropfender Lava; Lava statt Wasser |
+| Altes Schiff | zwei Felsinseln im Abendlicht | gestrandetes Piratenschiff mit drei Masten, Rahen, zerrissenen Segeln, Ausguck, Bugspriet und einem Loch im Rumpf, durch das man ins Schiff klettern kann |
+| Süßigkeiten | Schokoladenhügel mit Zuckerguss | Zuckerstangen, Lollis, schwebender Keks, Waffelbrücke, Streusel fallen vom Himmel; Kakao statt Wasser |
+| Fantasiewelt | Hügel mit Felsnadeln unter Sternenhimmel und zwei Monden | Riesenpilze, leuchtende Kristalle, schwebende Insel mit Wasserfall, Regenbogenbrücke, Glühwürmchen; Zauberwasser |
 
-In jeder Landschaft gibt es außerdem Überhänge für das Ninja-Seil: schwebende Felsinseln über den Tälern, Felsvorsprünge an steilen Hängen und Felsbögen über Schluchten, Meeresbuchten oder Lavagruben. Man kann auch auf ihnen stehen, und sie lassen sich wegsprengen.
-
-Bäume, Kakteen und Felsen sind nur Deko: Sie halten nichts auf und werden mit dem Gelände weggesprengt.
+Kleine Deko wie Bäume, Kakteen, Muscheln oder Bonbons hält nichts auf und wird mit dem Gelände weggesprengt.
 
 ## Kisten und Hindernisse
 

@@ -253,9 +253,9 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
         </div>
       </div>
       <div class="speech">
-        <div class="lbl"><label for="srate">Sprechtempo der Würmer</label><span id="sratev">1,4×</span></div>
+        <div class="lbl"><label for="srate">Sprechtempo der Würmer</label><span id="sratev">1,9×</span></div>
         <div class="rangerow">
-          <input type="range" id="srate" min="0.8" max="2.2" step="0.1" value="1.4" aria-describedby="sratev">
+          <input type="range" id="srate" min="0.8" max="2.2" step="0.1" value="1.9" aria-describedby="sratev">
           <button class="ghost probe" id="sprobe" type="button">Probe</button>
         </div>
       </div>
@@ -1887,7 +1887,7 @@ function wormSpeak(a, out, text, o) {
   return t - t0 + 0.1;
 }
 // every worm speaks its bubble in Wurmisch with its own pitch; frightened worms talk faster and tremble
-let speechRate = 1.4; // set with the slider in the start menu
+let speechRate = 1.9; // set with the slider in the start menu
 function voice(w, kind, txt) {
   const a = actx && !muted ? actx : null;
   if (!a || a.state !== 'running' || a.currentTime < voiceUntil) return;
@@ -2973,7 +2973,7 @@ document.querySelectorAll('#teams button').forEach((b) => b.addEventListener('cl
 for (let i = 0; i < 4; i++) $('who' + i).addEventListener('click', () => setWho(i, $('who' + i).dataset.cpu !== '1'));
 $('sound').addEventListener('click', () => setMuted(!muted));
 function setSpeechRate(v) {
-  speechRate = clamp(+v || 1.4, 0.8, 2.2);
+  speechRate = clamp(+v || 1.9, 0.8, 2.2);
   $('srate').value = speechRate;
   $('sratev').textContent = speechRate.toFixed(1).replace('.', ',') + '×';
 }

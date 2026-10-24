@@ -98,6 +98,8 @@ Bäume, Kakteen und Felsen sind nur Deko: Sie halten nichts auf und werden mit d
 
 Zu Beginn wählst du 2, 3 oder 4 Spieler, für jeden Spieler *Mensch* oder *Computer*, und 2, 3 oder 4 Würmer pro Team.
 
+**Teams:** Ab drei Spielern kannst du unter *Spielart* statt *Jeder gegen jeden* auch *Teams* wählen und jeden Spieler mit dem Knopf A oder B einem Team zuordnen, zum Beispiel 2 gegen 2 oder 2 gegen 1. Menschen und Computer können gemischt in einem Team spielen. Die Teams sind abwechselnd dran, innerhalb eines Teams wechseln sich die Spieler ab. Gewonnen hat das Team, das als letztes noch Würmer hat. Treffer an Verbündeten sind möglich, zählen aber nicht für die Bilanz, und der Computer vermeidet sie.
+
 Jedes Team merkt sich seine zuletzt gewählte Waffe. Die Teams sind abwechselnd dran, pro Zug gibt es 30 Sekunden. Im Startmenü lässt sich die Zeit pro Zug auf 15, 20, 30, 45, 60 oder 90 Sekunden einstellen. Nach dem Schuss bleibt kurz Zeit zum Rückzug. Danach erscheint die Übergabe an das nächste Team. Die Übergabe entfällt, wenn der Computer dran ist oder nur noch ein Mensch mitspielt. Würmer, die ins Wasser fallen, scheiden aus.
 
 **Sudden Death:** Nach sechs Runden steigt das Wasser (beim Vulkan die Lava) zu Beginn jedes Zugs ein Stück. Tief liegende Würmer müssen nach oben, sonst ertrinken sie.

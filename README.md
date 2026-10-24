@@ -10,6 +10,8 @@ Datei `index.html` im Browser öffnen, am besten auf dem Handy.
 
 Mit GitHub Pages lässt es sich als Webseite bereitstellen: In den Repo-Einstellungen unter *Pages* den Branch `main` und den Ordner `/ (root)` wählen.
 
+**Auf den Home-Bildschirm:** Auf dem iPhone in Safari über *Teilen → Zum Home-Bildschirm*, auf Android in Chrome über das Menü *Zum Startbildschirm hinzufügen* bzw. *App installieren*. Die Verknüpfung zeigt das Wurm-Icon und öffnet das Spiel ohne Adressleiste wie eine App. Die Icons in `icons/` werden mit `node icons/make-icons.js` aus der Wurm-Zeichnung des Spiels erzeugt.
+
 ## Mehrere Handys und Fernseher
 
 Ein Gerät ist der Spielleiter und zeigt das Spielfeld, am besten auf dem Fernseher: ein Laptop am HDMI-Kabel, ein Smart-TV-Browser oder ein Handy bzw. Tablet, dessen Bildschirm per Chromecast, AirPlay oder Miracast gespiegelt wird. Alle anderen nehmen ihr eigenes Handy als Controller.

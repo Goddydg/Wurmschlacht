@@ -128,6 +128,12 @@ p{margin:0;color:var(--muted);line-height:1.35}
 .seg button{height:44px;border-radius:10px;border:1px solid var(--line);background:var(--bg);font-weight:700;cursor:pointer}
 .seg button.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 .seg.two{grid-template-columns:1fr 1fr}
+.speech .lbl{display:flex;justify-content:space-between;gap:8px}
+.speech .lbl span{font-variant-numeric:tabular-nums;color:var(--fg)}
+.rangerow{display:flex;align-items:center;gap:10px;margin-top:6px}
+.rangerow input{flex:1;min-width:0;accent-color:var(--accent);height:32px}
+.rangerow input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.ghost.probe{height:40px;padding:0 16px;flex:none}
 .room{display:flex;gap:14px;align-items:center;padding:12px;border-radius:12px;background:var(--bg);border:1px solid var(--line)}
 .qr{flex:none;width:112px;height:112px;border-radius:8px;background:#fff;padding:4px;box-sizing:border-box}
 .qr:empty{display:none}
@@ -244,6 +250,13 @@ body.ctl .hud,body.ctl #cv,body.ctl .stage>.badge,body.ctl .zoomcol{display:none
         <div class="seg" id="ttime">
           <button data-t="15">15 s</button><button data-t="20">20 s</button><button data-t="30" class="on">30 s</button>
           <button data-t="45">45 s</button><button data-t="60">60 s</button><button data-t="90">90 s</button>
+        </div>
+      </div>
+      <div class="speech">
+        <div class="lbl"><label for="srate">Sprechtempo der Würmer</label><span id="sratev">1,4×</span></div>
+        <div class="rangerow">
+          <input type="range" id="srate" min="0.8" max="2.2" step="0.1" value="1.4" aria-describedby="sratev">
+          <button class="ghost probe" id="sprobe" type="button">Probe</button>
         </div>
       </div>
       <div>
@@ -1749,9 +1762,9 @@ const PH = {
   '6': { v: 1, f: [650, 1300, 2450], d: 0.09 },
   aI: { v: 1, f: [750, 1250, 2500], g: [300, 2150, 2900], d: 0.2 }, aU: { v: 1, f: [750, 1250, 2500], g: [330, 780, 2250], d: 0.2 },
   OY: { v: 1, f: [480, 850, 2450], g: [300, 1650, 2200], d: 0.2 },
-  m: { a: 0.45, f: [260, 1000, 2300], d: 0.07 }, n: { a: 0.45, f: [260, 1550, 2600], d: 0.065 }, N: { a: 0.45, f: [260, 2000, 2700], d: 0.07 },
-  l: { a: 0.6, f: [360, 1150, 2700], d: 0.06 }, r: { a: 0.5, f: [520, 1250, 2300], d: 0.05, nz: [1200, 1, 0.12] },
-  j: { a: 0.6, f: [290, 2200, 2950], d: 0.05 }, v: { a: 0.35, f: [320, 1000, 2300], d: 0.06, nz: [2500, 0.8, 0.2] },
+  m: { a: 0.65, f: [260, 1000, 2300], d: 0.07 }, n: { a: 0.65, f: [260, 1550, 2600], d: 0.065 }, N: { a: 0.65, f: [260, 2000, 2700], d: 0.07 },
+  l: { a: 0.75, f: [360, 1150, 2700], d: 0.06 }, r: { a: 0.65, f: [520, 1250, 2300], d: 0.05, nz: [1200, 1, 0.1] },
+  j: { a: 0.75, f: [290, 2200, 2950], d: 0.05 }, v: { a: 0.5, f: [320, 1000, 2300], d: 0.06, nz: [2500, 0.8, 0.18] },
   s: { nz: [6500, 1.4, 0.6], d: 0.09 }, S: { nz: [3000, 1.6, 0.7], d: 0.1 }, f: { nz: [3800, 0.6, 0.35], d: 0.08 },
   X: { nz: [3600, 2, 0.45], d: 0.08 }, h: { nz: [1600, 0.8, 0.25], d: 0.05 },
   p: { stop: 1, nz: [900, 1, 0.6], loc: 900 }, b: { stop: 1, vb: 1, nz: [800, 1, 0.4], loc: 900 },
@@ -1836,7 +1849,7 @@ function wormSpeak(a, out, text, o) {
   ph.forEach((x, idx) => {
     if (x.p === '_' || x.p === ',') {
       const d = (x.p === '_' ? 0.05 : 0.16) / rate;
-      vg.gain.setTargetAtTime(x.p === ',' ? 0 : 0.15, t, 0.015); ng.gain.setTargetAtTime(0, t, 0.01);
+      vg.gain.setTargetAtTime(x.p === ',' ? 0 : 0.55, t, x.p === ',' ? 0.03 : 0.02); ng.gain.setTargetAtTime(0, t, 0.012);
       t += d; wordStart = true;
       return;
     }
@@ -1846,9 +1859,9 @@ function wormSpeak(a, out, text, o) {
     if (q && pos > 0.6) f *= 1 + (pos - 0.6) * 1.4;
     if (P.v && wordStart) { f *= 1.12; wordStart = false; }
     if (P.stop) {
-      const close = 0.045 / rate, burst = 0.025 / rate;
-      vg.gain.setTargetAtTime(P.vb ? 0.12 : 0, t, 0.008);
-      F[1].frequency.setTargetAtTime(P.loc * fs, t, 0.01);
+      const close = 0.03 / rate, burst = 0.022 / rate;
+      vg.gain.setTargetAtTime(P.vb ? 0.3 : 0.08, t, 0.015);
+      F[1].frequency.setTargetAtTime(P.loc * fs, t, 0.02);
       nf.frequency.setValueAtTime(P.nz[0], t + close); nf.Q.setValueAtTime(P.nz[1], t + close);
       ng.gain.setValueAtTime(0, t + close); ng.gain.linearRampToValueAtTime(P.nz[2], t + close + 0.004); ng.gain.setTargetAtTime(0, t + close + 0.008, 0.008);
       t += close + burst;
@@ -1856,15 +1869,15 @@ function wormSpeak(a, out, text, o) {
     }
     const d = P.d * (x.long ? 1.6 : 1) / rate;
     if (P.f) {
-      P.f.forEach((v, k) => F[k].frequency.setTargetAtTime(v * fs, t, 0.018));
+      P.f.forEach((v, k) => F[k].frequency.setTargetAtTime(v * fs, t, 0.028));
       if (P.g) P.g.forEach((v, k) => F[k].frequency.setTargetAtTime(v * fs, t + d * 0.4, 0.03));
-      src.frequency.setTargetAtTime(f, t, 0.03);
-      vg.gain.setTargetAtTime(P.v ? 1 : P.a, t, 0.012);
-    } else vg.gain.setTargetAtTime(0, t, 0.01);
+      src.frequency.setTargetAtTime(f, t, 0.05);
+      vg.gain.setTargetAtTime(P.v ? 1 : P.a, t, 0.025);
+    } else vg.gain.setTargetAtTime(0.1, t, 0.02);
     if (P.nz) {
       nf.frequency.setValueAtTime(P.nz[0], t); nf.Q.setValueAtTime(P.nz[1], t);
-      ng.gain.setTargetAtTime(P.nz[2], t, 0.01); ng.gain.setTargetAtTime(0, t + d * 0.8, 0.012);
-    } else ng.gain.setTargetAtTime(0, t, 0.01);
+      ng.gain.setTargetAtTime(P.nz[2], t, 0.015); ng.gain.setTargetAtTime(0, t + d * 0.8, 0.015);
+    } else ng.gain.setTargetAtTime(0, t, 0.015);
     if (P.v && idx === ph.length - 1) src.frequency.setTargetAtTime(f * (q ? 1.25 : 0.85), t, d * 0.6);
     t += d;
   });
@@ -1874,14 +1887,14 @@ function wormSpeak(a, out, text, o) {
   return t - t0 + 0.1;
 }
 // every worm speaks its bubble in Wurmisch with its own pitch; frightened worms talk faster and tremble
-const SPEECH_RATE = 1.4;
+let speechRate = 1.4; // set with the slider in the start menu
 function voice(w, kind, txt) {
   const a = actx && !muted ? actx : null;
   if (!a || a.state !== 'running' || a.currentTime < voiceUntil) return;
   try {
     const scared = kind === 'fear' || kind === 'die' || kind === 'bighurt' || kind === 'drown' || kind === 'burn';
     const pitch = clamp(300 * (w.look && w.look.voice ? w.look.voice : 1), 250, 420);
-    const dur = wormSpeak(a, bus(a, w.x), txt, { pitch: pitch, rate: SPEECH_RATE * (scared ? 1.15 : 1), scared: scared, vol: 0.75 });
+    const dur = wormSpeak(a, bus(a, w.x), txt, { pitch: pitch, rate: speechRate * (scared ? 1.15 : 1), scared: scared, vol: 0.75 });
     voiceUntil = a.currentTime + dur;
   } catch (e) { /* sound is optional */ }
 }
@@ -2959,6 +2972,26 @@ function setWho(i, cpu) {
 document.querySelectorAll('#teams button').forEach((b) => b.addEventListener('click', () => setTeamCount(+b.dataset.n)));
 for (let i = 0; i < 4; i++) $('who' + i).addEventListener('click', () => setWho(i, $('who' + i).dataset.cpu !== '1'));
 $('sound').addEventListener('click', () => setMuted(!muted));
+function setSpeechRate(v) {
+  speechRate = clamp(+v || 1.4, 0.8, 2.2);
+  $('srate').value = speechRate;
+  $('sratev').textContent = speechRate.toFixed(1).replace('.', ',') + '×';
+}
+$('srate').addEventListener('input', () => {
+  setSpeechRate($('srate').value);
+  try { localStorage.setItem('wurm-srate', String(speechRate)); } catch (e) { /* optional */ }
+});
+$('sprobe').addEventListener('click', () => {
+  if (muted) setMuted(false);
+  const a = audio();
+  if (!a) return;
+  const say = () => {
+    voiceUntil = 0;
+    voice({ x: G.cam.x, look: { voice: rnd(0.9, 1.4) } }, 'turn', pick(['Hallo! Ich bin ein kleiner Wurm.', 'Auf geht’s, Leute!', 'Muss ich wirklich?', 'Aufpassen, ihr Würstchen!']));
+  };
+  // the very first tap may still be waking the audio up
+  if (a.state === 'running') say(); else a.resume().then(say).catch(() => { /* no sound */ });
+});
 function segPick(id, b) { document.querySelectorAll('#' + id + ' button').forEach((x) => x.classList.toggle('on', x === b)); }
 document.querySelectorAll('#land button').forEach((b) => b.addEventListener('click', () => segPick('land', b)));
 document.querySelectorAll('#ttime button').forEach((b) => b.addEventListener('click', () => segPick('ttime', b)));
@@ -2996,6 +3029,7 @@ try {
   const lb = st && document.querySelector('#land [data-land="' + st.land + '"]');
   if (lb) segPick('land', lb);
   if (localStorage.getItem('wurm-mute') === '1') setMuted(true);
+  if (localStorage.getItem('wurm-srate')) setSpeechRate(localStorage.getItem('wurm-srate'));
 } catch (e) { /* optional */ }
 genTerrain();
 new ResizeObserver(resize).observe($('stage'));

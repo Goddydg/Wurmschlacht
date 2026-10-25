@@ -70,7 +70,7 @@ Jeder Wurm ist ein eigener Charakter. Er hat einen Namen, eine Persönlichkeit (
 | Teleport | 1 | Ziel antippen, der Zug geht danach weiter |
 | Ninja-Seil | 5 | siehe unten, der Zug geht weiter |
 
-**Ninja-Seil:** Zielen und `Seil` antippen, das Seil hakt am nächsten Gelände in bis zu etwa 280 Pixeln Entfernung ein. Links und Rechts bringen den Wurm zum Schwingen, Höher und Tiefer kürzen und verlängern das Seil. Mit `Loslassen` oder `Sprung` lässt der Wurm los und fliegt mit seinem Schwung weiter. Die Munition wird pro Zug nur einmal verbraucht, innerhalb des Zugs kannst du das Seil beliebig oft einhaken. Eine Explosion in der Nähe, das Zugende und ein weggesprengter Haken lösen das Seil ebenfalls.
+**Ninja-Seil:** Zielen und `Seil` antippen: Ein Enterhaken fliegt mit dem Seil in Zielrichtung los, bis er Gelände oder einen Gegenstand trifft und dort einhakt, oder bis das Seil nach etwa 480 Pixeln zu Ende ist. Dann wird er wieder eingezogen, ohne dass Munition verbraucht wird. Links und Rechts bringen den Wurm zum Schwingen, Höher und Tiefer kürzen und verlängern das Seil. Mit `Loslassen` oder `Sprung` lässt der Wurm los und fliegt mit seinem Schwung weiter. Die Munition wird pro Zug nur einmal verbraucht, innerhalb des Zugs kannst du das Seil beliebig oft einhaken. Eine Explosion in der Nähe, das Zugende und ein weggesprengter Haken lösen das Seil ebenfalls.
 
 ## Landschaften
 

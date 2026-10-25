@@ -88,6 +88,8 @@ Im Startmenü wählst du eine von neun Landschaften oder lässt den Zufall entsc
 | Fantasiewelt | Hügel mit Felsnadeln unter Sternenhimmel und zwei Monden | Riesenpilze, leuchtende Kristalle, schwebende Insel mit Wasserfall, Regenbogenbrücke, Glühwürmchen; Zauberwasser |
 | Frühstück | ein gedeckter Tisch mit karierter Tischdecke in der Küche | riesige Kaffeetasse mit Henkel, Croissant als Tunnel, Käse mit Löchern zum Durchkriechen, Ei im Eierbecher, Marmeladenglas, Toaster mit Toast, Brotlaib mit angelehnter Scheibe; wer vom Tisch fällt, landet in der Milch |
 
+Zusätzlich gibt es in jeder Welt passende Ankerpunkte fürs Seil: Windmühle und Heißluftballons auf der Wiese, ein Wasserturm in der Wüste, ein Sessellift im Winter, Leuchtturm und Hängebrücken bei den Inseln, ein Drachenskelett und schwebende Obsidianbrocken am Vulkan, Hafenkran, Steg und Strickleitern beim Schiff, schwebende Donuts und Zuckerwatte bei den Süßigkeiten, ein Kristallbogen in der Fantasiewelt und Hängelampen, Wandregal, Müslipackung und Milchtüte beim Frühstück. Nach dem Bauen prüft das Spiel jede Stelle, an der ein Wurm stehen kann: Gibt es darüber in Seilreichweite keinen Halt, kommt dort noch ein passendes Element dazu.
+
 Kleine Deko wie Bäume, Kakteen, Muscheln oder Bonbons hält nichts auf und wird mit dem Gelände weggesprengt.
 
 ## Kisten und Hindernisse

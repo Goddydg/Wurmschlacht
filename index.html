@@ -379,7 +379,7 @@ const G = {
   team: -1, cur: null, wind: 0, timeLeft: 0, retreat: 0, aim: 35, power: 0, charging: false, weapon: 0,
   cam: { x: W / 2, y: H / 2 }, shake: 0, t: 0, settle: 0, per: 3, wptr: [0, 0, 0], ammo: [{}, {}, {}], overview: false,
   free: false, userScale: null, target: null, shotsLeft: 0, cool: 0, mines: [], barrels: [], crates: [],
-  mode: 'ffa', ally: null, aptr: {}, crateRate: 'normal', lastCrate: -9, turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
+  hook: null, mode: 'ffa', ally: null, aptr: {}, crateRate: 'normal', lastCrate: -9, turnNo: 0, turnTime: 30, sudden: false, waterGoal: H - 40, ai: null, wsel: [0, 0, 0],
   bubbles: [], sayQ: [], clouds: [], amb: [], planes: [], sayCd: 0, graves: [], turnDmg: 0, fired: false
 };
 const keys = { left: false, right: false, up: false, down: false };
@@ -1904,16 +1904,37 @@ function ropeRelease(w) {
   if (w && w.rope) { w.rope = null; w.ground = false; }
 }
 // returns the anchor the rope would catch, or null when nothing is in reach
-function ropeShot() {
-  const w = G.cur, a = G.aim * Math.PI / 180, dx = w.face * Math.cos(a), dy = -Math.sin(a);
-  let x = w.x, y = w.y - 4;
-  for (let i = 0; i < 140; i++) {
-    const px = x, py = y;
-    x += dx * 2; y += dy * 2;
-    if (x < 0 || x > W || y < -200) return null;
-    if (solid(x, y)) return { ax: px, ay: py, sx: x, sy: y };
+const ROPE_MAX = 480, HOOK_SPEED = 18;
+// the grappling hook flies out along the aim until it bites into something or the rope runs out
+function shootHook(w) {
+  const a = G.aim * Math.PI / 180;
+  G.hook = { x: w.x, y: w.y - 4, dx: w.face * Math.cos(a), dy: -Math.sin(a), d: 0, back: false };
+  sfx('hook', 0, w.x);
+}
+function attachRope(w, ax, ay, sx, sy) {
+  if (!G.ropeTurn) { consume('rop'); G.ropeTurn = true; }
+  w.rope = { ax: ax, ay: ay, sx: sx, sy: sy, len: clamp(Math.hypot(ax - w.x, ay - w.y), 24, ROPE_MAX) };
+  w.ground = false; w.y -= 2;
+  sfx('rope', 0, ax);
+  updateWeapons();
+}
+function stepHook() {
+  const h = G.hook, w = G.cur;
+  if (!h) return;
+  if (!w || !w.alive || !playing() || w.rope) { G.hook = null; return; }
+  if (h.back) {
+    // no hold: the hook is reeled back in
+    const vx = w.x - h.x, vy = w.y - 4 - h.y, d = Math.hypot(vx, vy);
+    if (d < 26) { G.hook = null; return; }
+    h.x += vx / d * 26; h.y += vy / d * 26;
+    return;
   }
-  return null;
+  for (let i = 0; i < HOOK_SPEED / 2; i++) {
+    const px = h.x, py = h.y;
+    h.x += h.dx * 2; h.y += h.dy * 2; h.d += 2;
+    if (solid(h.x, h.y)) { attachRope(w, px, py, h.x, h.y); G.hook = null; return; }
+    if (h.d >= ROPE_MAX || h.x < -20 || h.x > W + 20 || h.y < -400 || h.y > H) { h.back = true; toast('Kein Halt in Reichweite'); return; }
+  }
 }
 // the worm swings on a fixed-length rope: gravity, a sideways push and a taut-rope constraint
 function stepRope(w) {
@@ -1975,7 +1996,7 @@ function stepKami(p) {
 let lastSig = '';
 function setPhase(p) {
   G.phase = p;
-  if (p === 'resolve' || p === 'handoff' || p === 'over') G.worms.forEach((w) => { w.rope = null; });
+  if (p === 'resolve' || p === 'handoff' || p === 'over') { G.worms.forEach((w) => { w.rope = null; }); G.hook = null; }
   updateControls();
 }
 // on a TV the buttons disappear while a phone or the computer plays
@@ -2090,7 +2111,7 @@ function beginTurn() {
   if (sdNow) G.sudden = true;
   G.wind = Math.round(rnd(-10, 10));
   G.power = 0; G.charging = false; setPower(0);
-  G.shotsLeft = 0; G.cool = 0; G.target = null; G.free = false; G.userScale = null; G.ropeTurn = false; setOverview(false);
+  G.shotsLeft = 0; G.cool = 0; G.target = null; G.free = false; G.userScale = null; G.ropeTurn = false; G.hook = null; setOverview(false);
   G.cur.walk = 0; G.cam.x = G.cur.x; G.cam.y = G.cur.y; G.focus = null;
   updateWeapons(); setWindUi();
   $('sheet').hidden = true;
@@ -2216,14 +2237,7 @@ function fire() {
   if (id === 'rop') {
     ends = false;
     if (w.rope) { ropeRelease(w); G.cool = 8; }
-    else {
-      const hit = ropeShot();
-      if (!hit) { toast('Kein Halt in Reichweite'); return; }
-      if (!G.ropeTurn) { consume(id); G.ropeTurn = true; }
-      w.rope = { ax: hit.ax, ay: hit.ay, sx: hit.sx, sy: hit.sy, len: Math.max(24, Math.hypot(hit.ax - w.x, hit.ay - w.y)) };
-      w.ground = false; w.y -= 2; G.cool = 8;
-      sfx('rope');
-    }
+    else if (!G.hook) { shootHook(w); G.cool = 8; }
   } else if (id === 'kam') {
     consume(id);
     w.kami = true; w.vx = 0; w.vy = 0; w.fx = 0; w.ground = false; w.y -= 3;
@@ -2562,6 +2576,9 @@ function sfx(kind, size, x) {
     } else if (kind === 'jump') {
       tone(a, out, 'sine', 290, 580, 0.4, 0.01, 0.14);
       tone(a, out, 'sine', 580, 1160, 0.08, 0.01, 0.1);
+    } else if (kind === 'hook') {
+      noiseHit(a, out, 'bandpass', 600, 2400, 1.4, 0.35, 0.02, 0.22);
+      tone(a, out, 'triangle', 500, 900, 0.08, 0.01, 0.15);
     } else if (kind === 'rope') {
       tone(a, out, 'triangle', 1200, 600, 0.25, 0.002, 0.06);
       noiseHit(a, out, 'highpass', 3000, 2000, 0.7, 0.25, 0.001, 0.03);
@@ -3039,7 +3056,7 @@ function tick() {
       // the computer aims and charges in aiTick
       if (!bot && cur.rope) {
         if (keys.up) cur.rope.len = Math.max(20, cur.rope.len - 1.6);
-        if (keys.down) cur.rope.len = Math.min(280, cur.rope.len + 1.6);
+        if (keys.down) cur.rope.len = Math.min(ROPE_MAX, cur.rope.len + 1.6);
       } else if (!bot && !targeting) {
         if (keys.up) G.aim = Math.min(85, G.aim + 0.9);
         if (keys.down) G.aim = Math.max(-45, G.aim - 0.9);
@@ -3052,6 +3069,7 @@ function tick() {
       if (G.retreat <= 0) { setPhase('resolve'); G.settle = 0; }
     }
   }
+  stepHook();
   G.worms.forEach(stepWorm);
   for (let i = G.proj.length - 1; i >= 0; i--) if (stepProj(G.proj[i])) G.proj.splice(i, 1);
   stepMines(); stepBarrels(); stepCrates(); stepPlanes(); stepGraves();
@@ -3093,7 +3111,7 @@ function updateCam() {
   if (G.overview) { tx = W / 2; ty = H / 2; }
   else if (!G.free) {
     const p = G.proj[0];
-    if (p) { tx = p.x; ty = p.y; } else if (G.focus && G.focus.t > 0) { tx = G.focus.x; ty = G.focus.y - 20; } else if (G.cur) { tx = G.cur.x; ty = G.cur.y - 24; } else { tx = W / 2; ty = H / 2; }
+    if (p) { tx = p.x; ty = p.y; } else if (G.hook && G.cur) { tx = (G.cur.x + G.hook.x) / 2; ty = (G.cur.y + G.hook.y) / 2; } else if (G.focus && G.focus.t > 0) { tx = G.focus.x; ty = G.focus.y - 20; } else if (G.cur) { tx = G.cur.x; ty = G.cur.y - 24; } else { tx = W / 2; ty = H / 2; }
   }
   G.cam.x += (tx - G.cam.x) * 0.09; G.cam.y += (ty - G.cam.y) * 0.09;
   const vw = cw / scale, vh = ch / scale;
@@ -3732,12 +3750,37 @@ function drawCrate(c) {
   }
   ctx.restore();
 }
+function drawHookAt(x, y, dx, dy) {
+  // a small grappling hook pointing along dx/dy
+  ctx.save(); ctx.translate(x, y); ctx.rotate(Math.atan2(dy, dx));
+  ctx.strokeStyle = '#5d5d66'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-6, 0); ctx.lineTo(3, 0);
+  ctx.moveTo(3, 0); ctx.quadraticCurveTo(6, -5, 1, -7);
+  ctx.moveTo(3, 0); ctx.quadraticCurveTo(6, 5, 1, 7);
+  ctx.moveTo(3, 0); ctx.lineTo(7, 0); ctx.stroke();
+  ctx.fillStyle = '#8a8a94'; ctx.beginPath(); ctx.arc(-6, 0, 1.8, 0, 6.283); ctx.fill();
+  ctx.restore();
+}
+function drawRopeLine(x0, y0, x1, y1) {
+  ctx.strokeStyle = '#7a5a3a'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  ctx.strokeStyle = '#efe3c4'; ctx.lineWidth = 1.6; ctx.setLineDash([3, 3]);
+  ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+  ctx.setLineDash([]);
+}
 function drawRope(w) {
   const r = w.rope;
   ctx.save();
-  ctx.strokeStyle = '#efe3c4'; ctx.lineWidth = 2; ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(r.ax, r.ay); ctx.lineTo(w.x, w.y - 3); ctx.stroke();
-  ctx.fillStyle = '#4a3f33'; ctx.beginPath(); ctx.arc(r.ax, r.ay, 3, 0, 6.283); ctx.fill();
+  drawRopeLine(w.x, w.y - 3, r.ax, r.ay);
+  drawHookAt(r.ax, r.ay, r.sx - r.ax || 0.01, r.sy - r.ay);
+  ctx.restore();
+}
+function drawHook() {
+  const h = G.hook, w = G.cur;
+  if (!h || !w) return;
+  ctx.save();
+  drawRopeLine(w.x, w.y - 3, h.x, h.y);
+  drawHookAt(h.x, h.y, h.back ? w.x - h.x : h.dx, h.back ? w.y - h.y : h.dy);
   ctx.restore();
 }
 function drawTarget() {
@@ -3819,6 +3862,7 @@ function draw() {
   G.planes.forEach(drawPlane);
   G.graves.forEach(drawGrave);
   G.worms.forEach((w) => { if (w.alive && w.rope) drawRope(w); });
+  drawHook();
   G.worms.forEach((w) => { if (w.alive && w !== G.cur) drawWorm(w); });
   if (G.cur && G.cur.alive) drawWorm(G.cur);
   G.proj.forEach(drawProj);

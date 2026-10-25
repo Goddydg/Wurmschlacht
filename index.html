@@ -821,6 +821,12 @@ function galleon() {
     tctx.strokeStyle = 'rgba(60,40,20,.55)'; tctx.lineWidth = 1;
     masts.forEach((m) => { const top = -18 - m[1]; [[-330, -60], [300, -44]].forEach((e) => { S.path([[m[0], top + 6], [e[0] * 0.6 + m[0] * 0.4, e[1]]]); tctx.stroke(); }); });
     S.path([[20, -338], [430, -100]]); tctx.stroke();
+    // rope ladders from the main yard down to the deck
+    [[-40, -228], [80, -228]].forEach((l) => {
+      tctx.strokeStyle = 'rgba(110,80,45,.9)'; tctx.lineWidth = 1.4;
+      S.path([[l[0], l[1]], [l[0] - 6, -20]]); tctx.stroke(); S.path([[l[0] + 12, l[1]], [l[0] + 6, -20]]); tctx.stroke();
+      for (let t = 0.08; t < 1; t += 0.09) { const yy = l[1] + (-20 - l[1]) * t; S.path([[l[0] - 6 * t, yy], [l[0] + 12 - 6 * t, yy]]); tctx.stroke(); }
+    });
     S.poly([[24, -336], [74, -330], [64, -316], [76, -302], [24, -306]], '#1e1a1a');
     S.circ(44, -322, 6, '#f4f1ea'); tctx.fillStyle = '#1e1a1a'; tctx.fillRect(40, -324, 3, 3); tctx.fillRect(46, -324, 3, 3);
     tctx.strokeStyle = '#f4f1ea'; tctx.lineWidth = 2; S.path([[36, -312], [52, -306]]); tctx.stroke(); S.path([[52, -312], [36, -306]]); tctx.stroke();
@@ -1041,6 +1047,264 @@ function breadLoaf(x) {
   tctx.restore();
   tops.push(loaf.slice(3, 18));
 }
+/* more anchor points for the rope: one or two signature pieces per world, then fillers wherever a worm would have nothing to hook into */
+function balloon(x, y, cols) {
+  const r = 30, env = [];
+  for (let i = 0; i <= 24; i++) { const a = Math.PI * 0.82 + i / 24 * Math.PI * 1.36; env.push([x + Math.cos(a) * r, y + Math.sin(a) * r]); }
+  env.push([x + 9, y + 46], [x - 9, y + 46]);
+  S.poly(env, cols[0], 'rgba(40,20,20,.45)', 1.4);
+  S.clipTo(env, () => {
+    for (let i = -3; i <= 3; i += 2) { tctx.fillStyle = cols[1]; tctx.beginPath(); tctx.ellipse(x + i * 9, y + 4, 4.5, 44, 0, 0, TAU); tctx.fill(); }
+    S.ell(x - 12, y - 14, 9, 14, -0.4, 'rgba(255,255,255,.25)');
+  });
+  S.poly([[x - 11, y + 60], [x + 11, y + 60], [x + 9, y + 76], [x - 9, y + 76]], '#a8743f', '#6b4a22', 1.2);
+  S.clipTo([[x - 11, y + 60], [x + 11, y + 60], [x + 9, y + 76], [x - 9, y + 76]], () => { tctx.strokeStyle = 'rgba(80,50,20,.5)'; tctx.lineWidth = 1; for (let yy = y + 63; yy < y + 76; yy += 4) { S.path([[x - 12, yy], [x + 12, yy]]); tctx.stroke(); } });
+  post.push(() => {
+    tctx.strokeStyle = 'rgba(60,40,20,.7)'; tctx.lineWidth = 1;
+    [[-9, -10], [9, 10], [-3, -4], [3, 4]].forEach((d) => { S.path([[x + d[0], y + 46], [x + d[1], y + 60]]); tctx.stroke(); });
+    S.ell(x, y + 50, 3, 5, 0, 'rgba(255,170,60,.85)');
+  });
+}
+function windmill(x) {
+  const y = hs[x] + 6, h = 130, hub = [x, y - h + 8];
+  const tower = [[x - 24, y], [x - 15, y - h], [x + 15, y - h], [x + 24, y]];
+  S.poly(tower, '#efe6d2', '#a89a80', 1.5);
+  S.clipTo(tower, () => { tctx.strokeStyle = 'rgba(120,100,70,.25)'; tctx.lineWidth = 1; for (let yy = y - h; yy < y; yy += 10) { S.path([[x - 30, yy], [x + 30, yy]]); tctx.stroke(); } });
+  S.poly([[x - 6, y], [x - 6, y - 18], [x, y - 22], [x + 6, y - 18], [x + 6, y]], '#7a5232');
+  S.ell(x, y - 70, 5, 6, 0, '#5a8fbf');
+  S.poly([[x - 20, y - h], [x, y - h - 26], [x + 20, y - h]], '#b8452f', '#7a2a1a', 1.2);
+  const rot = rnd(0, Math.PI / 2);
+  for (let i = 0; i < 4; i++) {
+    const a = rot + i * Math.PI / 2, ca = Math.cos(a), sa = Math.sin(a), nx = -sa * 7, ny = ca * 7;
+    const p0 = [hub[0] + ca * 10, hub[1] + sa * 10], p1 = [hub[0] + ca * 76, hub[1] + sa * 76];
+    S.band([hub, p1], 4, '#6b4a2e');
+    const blade = [[p0[0] + nx * 0.2, p0[1] + ny * 0.2], [p1[0] + nx * 0.2, p1[1] + ny * 0.2], [p1[0] + nx * 2, p1[1] + ny * 2], [p0[0] + ca * 14 + nx * 2, p0[1] + sa * 14 + ny * 2]];
+    S.poly(blade, '#f4ead2', '#8a6a40', 1);
+    S.clipTo(blade, () => { tctx.strokeStyle = 'rgba(120,90,50,.45)'; tctx.lineWidth = 1; for (let t = 0.25; t < 1; t += 0.15) { S.path([[hub[0] + ca * 76 * t, hub[1] + sa * 76 * t], [hub[0] + ca * 76 * t + nx * 2.2, hub[1] + sa * 76 * t + ny * 2.2]]); tctx.stroke(); } });
+  }
+  S.circ(hub[0], hub[1], 6, '#4a3324');
+}
+// a sagging bridge of planks between two rims, the ropes are only painted
+function ropeBridge(br) {
+  const line = bridgeLine(br, -26, 6);
+  for (let i = 1; i < line.length - 1; i++) {
+    if (i % 2) continue;
+    const p = line[i], q = line[i + 1] || p, a = Math.atan2(q[1] - p[1], q[0] - p[0]);
+    tctx.save(); tctx.translate(p[0], p[1]); tctx.rotate(a);
+    S.poly([[-1, 0], [13, 0], [13, 5], [-1, 5]], '#a8743f', '#6b4a22', 1);
+    tctx.restore();
+  }
+  post.push(() => {
+    tctx.strokeStyle = '#8b6a45'; tctx.lineWidth = 1.6;
+    [0, -16].forEach((off) => { S.path(line.map((p) => [p[0], p[1] + off])); tctx.stroke(); });
+    tctx.lineWidth = 1;
+    for (let i = 2; i < line.length - 1; i += 2) { const p = line[i]; S.path([[p[0], p[1] - 16], [p[0], p[1]]]); tctx.stroke(); }
+    [line[0], line[line.length - 1]].forEach((p) => S.band([[p[0], p[1] + 6], [p[0], p[1] - 22]], 4, '#6b4a2e'));
+  });
+}
+function waterTower(x) {
+  const y = hs[x] + 6, h = 120;
+  [[-26, -18], [26, 18]].forEach((l) => S.band([[x + l[0], y], [x + l[1], y - h]], 5, '#6b4a2e'));
+  [[-12, -8], [12, 8]].forEach((l) => S.band([[x + l[0], y], [x + l[1], y - h]], 4, '#5a3d24'));
+  const tank = [[x - 34, y - h], [x - 34, y - h - 54], [x + 34, y - h - 54], [x + 34, y - h]];
+  S.poly(tank, '#a8743f', '#6b4a22', 1.5);
+  S.clipTo(tank, () => { tctx.strokeStyle = 'rgba(80,50,20,.4)'; tctx.lineWidth = 1; for (let xx = x - 34; xx < x + 34; xx += 8) { S.path([[xx, y - h], [xx, y - h - 54]]); tctx.stroke(); } [12, 40].forEach((d) => S.band([[x - 36, y - h - d], [x + 36, y - h - d]], 3, '#4a4e58')); });
+  S.poly([[x - 40, y - h - 54], [x, y - h - 82], [x + 40, y - h - 54]], '#8a5a3a', '#5a3a22', 1.2);
+  S.band([[x - 30, y - h + 2], [x + 30, y - h + 2]], 4, '#5a3d24');
+  post.push(() => {
+    tctx.strokeStyle = 'rgba(80,55,30,.7)'; tctx.lineWidth = 1.4;
+    for (let t = 0; t < 3; t++) { const y0 = y - t * 40, y1 = y - (t + 1) * 40; S.path([[x - 24 + t * 2.6, y0], [x + 22 - (t + 1) * 2.6, y1]]); tctx.stroke(); S.path([[x + 24 - t * 2.6, y0], [x - 22 + (t + 1) * 2.6, y1]]); tctx.stroke(); }
+  });
+}
+// a chairlift across the mountains: pylons, a sagging cable and chairs to hook into
+function skiLift() {
+  const xs = [];
+  for (let x = 170; x < W - 170; x += Math.round(rnd(240, 300))) if (hs[x] < WATERY - 60) xs.push(x);
+  if (xs.length < 2) return;
+  const tops = xs.map((x) => [x, hs[x] - 150]);
+  tops.forEach((t) => {
+    S.band([[t[0], hs[t[0]] + 6], [t[0], t[1]]], 8, '#5d6670');
+    S.band([[t[0] - 22, t[1]], [t[0] + 22, t[1]]], 6, '#4a525b');
+    S.circ(t[0] - 18, t[1] - 3, 3, '#2b3138'); S.circ(t[0] + 18, t[1] - 3, 3, '#2b3138');
+  });
+  const cable = [];
+  for (let i = 0; i < tops.length - 1; i++) {
+    const a = tops[i], b = tops[i + 1];
+    for (let j = 0; j <= 20; j++) { const t = j / 20; cable.push([a[0] + (b[0] - a[0]) * t, a[1] - 3 + (b[1] - a[1]) * t + Math.sin(t * Math.PI) * 26]); }
+  }
+  const chairs = [];
+  for (let i = 4; i < cable.length - 2; i += 7) {
+    const p = cable[i], cy = p[1] + 30;
+    if (cy > hs[clamp(Math.round(p[0]), 0, W - 1)] - 40) continue;
+    chairs.push(p);
+    S.poly([[p[0] - 14, cy], [p[0] + 14, cy], [p[0] + 14, cy + 5], [p[0] - 14, cy + 5]], '#d9372b', '#7a1a12', 1);
+    S.poly([[p[0] - 14, cy - 14], [p[0] - 10, cy - 14], [p[0] - 10, cy], [p[0] - 14, cy]], '#d9372b');
+    S.band([[p[0], p[1]], [p[0], cy]], 3, '#3b4148');
+  }
+  post.push(() => { tctx.strokeStyle = '#2b3138'; tctx.lineWidth = 1.5; S.path(cable); tctx.stroke(); });
+}
+function lighthouse(x) {
+  const y = hs[x] + 6, h = 140;
+  const tower = [[x - 20, y], [x - 13, y - h], [x + 13, y - h], [x + 20, y]];
+  S.poly(tower, '#f4f1ea', '#9a8f80', 1.5);
+  S.clipTo(tower, () => { for (let yy = y - h + 16; yy < y; yy += 34) { tctx.fillStyle = '#d9372b'; tctx.fillRect(x - 26, yy, 52, 16); } });
+  S.poly([[x - 26, y - h], [x + 26, y - h], [x + 26, y - h - 5], [x - 26, y - h - 5]], '#3b3f46');
+  S.poly([[x - 10, y - h - 5], [x + 10, y - h - 5], [x + 10, y - h - 24], [x - 10, y - h - 24]], '#ffe07a', '#3b3f46', 1.5);
+  S.poly([[x - 14, y - h - 24], [x, y - h - 38], [x + 14, y - h - 24]], '#d9372b', '#7a1a12', 1.2);
+  S.ell(x, y - 60, 4, 6, 0, '#3b3f46');
+  post.push(() => {
+    const g = tctx.createLinearGradient(x, 0, x + 150, 0); g.addColorStop(0, 'rgba(255,240,170,.45)'); g.addColorStop(1, 'rgba(255,240,170,0)');
+    tctx.fillStyle = g; S.path([[x + 10, y - h - 18], [x + 160, y - h - 46], [x + 160, y - h + 8]]); tctx.closePath(); tctx.fill();
+    tctx.strokeStyle = '#3b3f46'; tctx.lineWidth = 1; S.path([[x - 26, y - h - 12], [x + 26, y - h - 12]]); tctx.stroke();
+  });
+}
+// a dragon skeleton: a spine on raised ribs, the ribs arch over the ground
+function ribcage(x) {
+  const y = hs[x], len = 220, spineY = y - 130, x0 = x - len / 2, bone = '#e8dfc8', line = '#8a7f68';
+  for (let i = 0; i < 6; i++) {
+    const rx = x0 + 20 + i * 36, gy = hs[clamp(Math.round(rx + 30), 0, W - 1)] + 4;
+    const rib = S.quad([rx, spineY], [rx + 56, spineY + 10], [rx + 30, gy], 10);
+    S.band(rib, 9, line); S.band(rib, 6, bone);
+  }
+  const spine = S.quad([x0 - 10, spineY + 6], [x, spineY - 18], [x0 + len + 10, spineY + 4], 16);
+  S.band(spine, 12, line); S.band(spine, 9, bone);
+  spine.forEach((p, i) => { if (i % 2 === 0) S.circ(p[0], p[1] - 4, 4.5, bone); });
+  const sx = x0 - 20, sy = spineY + 8;
+  S.poly([[sx + 10, sy - 8], [sx - 24, sy - 14], [sx - 46, sy - 2], [sx - 30, sy + 10], [sx + 8, sy + 10]], bone, line, 1.5);
+  S.hollow([[sx - 14, sy - 8], [sx - 6, sy - 9], [sx - 6, sy - 2], [sx - 14, sy - 2]], '#1a1210');
+  S.poly([[sx - 18, sy - 12], [sx - 4, sy - 26], [sx - 2, sy - 12]], bone, line, 1.2);
+  post.push(() => { const g = tctx.createRadialGradient(sx - 10, sy - 5, 1, sx - 10, sy - 5, 6); g.addColorStop(0, 'rgba(255,90,30,.95)'); g.addColorStop(1, 'rgba(255,60,20,0)'); tctx.fillStyle = g; tctx.fillRect(sx - 18, sy - 12, 16, 16); });
+}
+function obsidian(x, y) {
+  const rx = rnd(26, 36), top = [], under = [];
+  for (let i = 0; i <= 12; i++) { const t = i / 12; top.push([x - rx + t * 2 * rx, y - Math.sin(t * Math.PI) * 10 + rnd(-2, 2)]); }
+  for (let i = 12; i >= 0; i--) { const t = i / 12; under.push([x - rx + t * 2 * rx, y + 6 + Math.sin(t * Math.PI) * rx * 0.9 + rnd(-3, 3)]); }
+  const pts = top.concat(under);
+  S.poly(pts, '#1e1a22', '#0c0a0e', 1.4);
+  S.clipTo(pts, () => { tctx.strokeStyle = 'rgba(255,110,40,.8)'; tctx.lineWidth = 1.5; S.path([[x - rx * 0.5, y + 4], [x - 4, y + 14], [x + 6, y + 10], [x + rx * 0.4, y + 22]]); tctx.stroke(); S.ell(x - rx * 0.3, y - 2, rx * 0.4, 3, -0.2, 'rgba(160,140,200,.25)'); });
+  post.push(() => { tctx.strokeStyle = '#5a5560'; tctx.lineWidth = 1.6; tctx.setLineDash([4, 3]); S.path([[x, y + rx * 0.9], [x + rnd(-4, 4), y + rx * 0.9 + 30]]); tctx.stroke(); tctx.setLineDash([]); });
+}
+function harbourCrane(x, dir) {
+  const y = hs[x] + 6, h = 170, top = [x, y - h], end = [x + dir * 130, y - h + 6];
+  S.poly([[x - 14, y], [x - 6, y - h], [x + 6, y - h], [x + 14, y]], '#c9a227', '#7a6010', 1.4);
+  S.clipTo([[x - 14, y], [x - 6, y - h], [x + 6, y - h], [x + 14, y]], () => { tctx.strokeStyle = 'rgba(80,60,10,.6)'; tctx.lineWidth = 1.4; for (let yy = y; yy > y - h; yy -= 18) { S.path([[x - 14, yy], [x + 14, yy - 18]]); tctx.stroke(); } });
+  S.band([[top[0] - dir * 20, top[1]], end], 7, '#c9a227');
+  S.poly([[x - dir * 30, y - h + 2], [x - dir * 18, y - h + 2], [x - dir * 18, y - h + 18], [x - dir * 30, y - h + 18]], '#5a5550');
+  const cy = y - h + 70;
+  S.poly([[end[0] - 14, cy], [end[0] + 14, cy], [end[0] + 14, cy + 22], [end[0] - 14, cy + 22]], '#b9823f', '#6b4a22', 1.2);
+  S.band([[end[0] - 14, cy], [end[0] + 14, cy + 22]], 2, '#6b4a22');
+  post.push(() => { tctx.strokeStyle = '#3b3631'; tctx.lineWidth = 1.2; S.path([[end[0], end[1]], [end[0], cy]]); tctx.stroke(); S.path([top, [x + dir * 70, y - h + 4]]); tctx.stroke(); });
+}
+function pier(x, dir) {
+  const y = WATERY - 26, len = 140, x1 = x + dir * len;
+  S.poly([[Math.min(x, x1), y], [Math.max(x, x1), y], [Math.max(x, x1), y + 7], [Math.min(x, x1), y + 7]], '#8a6440', '#5a3d24', 1.2);
+  for (let i = 0; i <= 4; i++) { const px = x + dir * i * len / 4; S.band([[px, y - 18], [px, WATERY + 30]], 6, '#6b4a2e'); }
+  post.push(() => { tctx.strokeStyle = 'rgba(60,40,20,.5)'; tctx.lineWidth = 1; for (let i = 0; i < 18; i++) { const px = Math.min(x, x1) + i * len / 18; S.path([[px, y], [px, y + 7]]); tctx.stroke(); } });
+}
+function donut(x, y) {
+  const r = rnd(22, 28), ring = [];
+  for (let i = 0; i < 28; i++) { const a = i / 28 * TAU; ring.push([x + Math.cos(a) * r, y + Math.sin(a) * r]); }
+  S.poly(ring, '#d9a25a', '#a8692a', 1.4);
+  const icing = ring.map((p, i) => [p[0], p[1] + (p[1] > y ? -2 - (i % 3) : 1)]);
+  S.clipTo(ring, () => { S.poly(icing.filter((p) => p[1] < y + r * 0.45), pick(['#ff7fb0', '#7a4a2e', '#fbf4e2'])); });
+  const hole = []; for (let i = 0; i < 16; i++) { const a = i / 16 * TAU; hole.push([x + Math.cos(a) * r * 0.36, y + Math.sin(a) * r * 0.36]); }
+  S.hollow(hole, '#d9a25a');
+  for (let i = 0; i < 10; i++) { const a = rnd(Math.PI * 1.05, Math.PI * 1.95), d = r * rnd(0.55, 0.85); tctx.save(); tctx.translate(x + Math.cos(a) * d, y + Math.sin(a) * d); tctx.rotate(rnd(0, 3)); tctx.fillStyle = pick(['#ffd23f', '#7fd4ff', '#7bc950', '#ffffff', '#9b5de5']); tctx.fillRect(-2, -0.7, 4, 1.4); tctx.restore(); }
+}
+function cottonCandy(x, y) {
+  const blobs = [[-22, 4, 16], [-6, -6, 20], [14, -2, 18], [28, 6, 13], [4, 8, 16]];
+  blobs.forEach((b) => S.circ(x + b[0], y + b[1] + 3, b[2], '#f29ac3'));
+  blobs.forEach((b) => S.circ(x + b[0], y + b[1], b[2], '#ffc4de'));
+  blobs.forEach((b) => S.circ(x + b[0] - b[2] * 0.3, y + b[1] - b[2] * 0.35, b[2] * 0.4, 'rgba(255,255,255,.55)'));
+}
+function licoriceBridge(br) {
+  const line = bridgeLine(br, -18, 10);
+  S.band(line, 9, '#1e1416');
+  tctx.save(); tctx.setLineDash([5, 7]); S.band(line, 9, '#c2223a', 'butt'); tctx.restore();
+  S.band(line.map((p) => [p[0], p[1] - 2]), 1.5, 'rgba(255,255,255,.3)');
+}
+function crystalArch(br) {
+  const line = bridgeLine(br, 40, 14);
+  for (let i = 0; i < line.length - 1; i += 2) {
+    const p = line[i], q = line[Math.min(i + 2, line.length - 1)], a = Math.atan2(q[1] - p[1], q[0] - p[0]);
+    tctx.save(); tctx.translate(p[0], p[1]); tctx.rotate(a);
+    const c = i % 4 ? ['#7fe7ff', '#d8fbff'] : ['#ff8ad8', '#ffe0f6'];
+    S.poly([[0, -2], [18, -6], [24, 4], [16, 12], [2, 10]], c[0], 'rgba(40,20,80,.45)', 1);
+    S.poly([[2, -1], [18, -5], [20, 2], [6, 3]], c[1]);
+    tctx.restore();
+  }
+  post.push(() => { line.forEach((p, i) => { if (i % 6 === 3) { const g = tctx.createRadialGradient(p[0], p[1], 1, p[0], p[1], 26); g.addColorStop(0, 'rgba(200,240,255,.35)'); g.addColorStop(1, 'rgba(200,240,255,0)'); tctx.fillStyle = g; tctx.fillRect(p[0] - 26, p[1] - 26, 52, 52); } }); });
+}
+function pendantLamp(x, y) {
+  const cols = pick([['#e4572e', '#a8331a'], ['#2e86de', '#1d5ea0'], ['#16967f', '#0d6656'], ['#f2a33a', '#b9741a']]);
+  const shade = S.quad([x - 34, y + 22], [x, y - 30], [x + 34, y + 22], 14);
+  S.poly(shade, cols[0], cols[1], 1.5);
+  S.band([[x - 34, y + 22], [x + 34, y + 22]], 3, cols[1]);
+  S.ell(x - 10, y - 2, 8, 12, -0.6, 'rgba(255,255,255,.3)');
+  S.circ(x, y - 7, 5, cols[1]);
+  post.push(() => {
+    tctx.strokeStyle = '#3b3631'; tctx.lineWidth = 1.5; S.path([[x, y - 10], [x, -420]]); tctx.stroke();
+    const g = tctx.createRadialGradient(x, y + 26, 2, x, y + 26, 60); g.addColorStop(0, 'rgba(255,240,180,.55)'); g.addColorStop(1, 'rgba(255,240,180,0)');
+    tctx.fillStyle = g; tctx.fillRect(x - 60, y + 20, 120, 70);
+    S.ell(x, y + 24, 9, 5, 0, '#fff6c8');
+  });
+}
+function wallShelf(x) {
+  const y = hs[x] - rnd(215, 240), w = 170;
+  S.poly([[x - w / 2, y], [x + w / 2, y], [x + w / 2, y + 9], [x - w / 2, y + 9]], '#a8743f', '#6b4a22', 1.4);
+  [[x - w / 2 + 20], [x + w / 2 - 20]].forEach((b) => S.poly([[b[0] - 3, y + 9], [b[0] + 3, y + 9], [b[0] + 3, y + 30], [b[0] - 18, y + 9]], '#8a5a3a'));
+  // things on the shelf
+  S.ell(x - 48, y - 16, 5, 18, 0, '#f4f1ea'); S.ell(x - 36, y - 16, 5, 18, 0, '#e8e2d8');
+  S.poly([[x - 6, y], [x - 8, y - 30], [x + 18, y - 30], [x + 16, y]], '#c2223a', '#7a1420', 1);
+  S.poly([[x - 10, y - 30], [x + 20, y - 30], [x + 18, y - 36], [x - 8, y - 36]], '#f6f1e6');
+  S.poly([[x + 36, y], [x + 36, y - 22], [x + 60, y - 22], [x + 60, y]], '#e9c46a', '#a8741a', 1);
+  tops.push([[x - w / 2, y], [x + w / 2, y]]);
+}
+function cerealBox(x) {
+  const y = hs[x] + 2, box = [[x - 26, y], [x - 26, y - 130], [x + 26, y - 130], [x + 26, y]];
+  S.poly(box, '#f2a33a', '#a8601a', 1.5);
+  S.clipTo(box, () => {
+    tctx.fillStyle = '#e4572e'; tctx.fillRect(x - 30, y - 130, 60, 26);
+    S.circ(x, y - 66, 16, '#fbf4e2'); for (let i = 0; i < 6; i++) S.circ(x + rnd(-9, 9), y - 66 + rnd(-8, 8), 3, '#d9a25a');
+    tctx.fillStyle = '#fff'; tctx.fillRect(x - 20, y - 122, 40, 5);
+    tctx.fillStyle = 'rgba(0,0,0,.12)'; tctx.fillRect(x + 14, y - 130, 12, 130);
+  });
+  tops.push([[x - 24, y - 130], [x + 24, y - 130]]);
+}
+function milkCarton(x) {
+  const y = hs[x] + 2, body = [[x - 20, y], [x - 20, y - 86], [x, y - 104], [x + 20, y - 86], [x + 20, y]];
+  S.poly(body, '#fbfbf8', '#9fb6c8', 1.5);
+  S.clipTo(body, () => { tctx.fillStyle = '#2e86de'; tctx.fillRect(x - 24, y - 60, 48, 22); S.ell(x - 6, y - 24, 6, 4, 0, '#2b2730'); S.ell(x + 8, y - 18, 5, 3, 0, '#2b2730'); });
+  S.band([[x - 3, y - 104], [x + 3, y - 104]], 3, '#9fb6c8');
+}
+// fillers: wherever a worm would see nothing above to hook into, the world gets one more anchor
+const FILL = {
+  wiese: (x, y) => balloon(x, y, pick([['#e4572e', '#ffd23f'], ['#2e86de', '#f4f1ea'], ['#7bc950', '#ffd23f']])),
+  wueste: (x, y) => balloon(x, y, pick([['#c9362a', '#f2c46a'], ['#8a4fd0', '#f2c46a']])),
+  winter: (x, y) => balloon(x, y, pick([['#d9372b', '#f4f8fb'], ['#2e86de', '#f4f8fb']])),
+  inseln: (x, y) => balloon(x, y, pick([['#16967f', '#ffd23f'], ['#f15bb5', '#fff6c8']])),
+  vulkan: obsidian,
+  schiff: (x, y) => balloon(x, y, [['#1e1a1a', '#f4f1ea']][0]),
+  suess: (x, y) => (Math.random() < 0.5 ? donut(x, y) : cottonCandy(x, y)),
+  fantasie: (x, y) => floatingIsle(x, y),
+  fruehstueck: (x, y) => pendantLamp(x, y)
+};
+function fillAnchors() {
+  const fill = FILL[theme.id];
+  if (!fill) return;
+  const img = tctx.getImageData(0, 0, W, H).data, placed = [];
+  const solidAt = (x, y) => x >= 0 && x < W && y >= 0 && y < H && img[(y * W + x) * 4 + 3] > 128;
+  for (let x = 130; x < W - 130; x += 50) {
+    const gy = hs[x];
+    if (gy > WATERY - 20 || placed.length >= 3 || placed.some((p) => Math.abs(p - x) < 260)) continue;
+    // something to hook into has to be well above the worm, not just a bump beside it
+    let ok = false;
+    for (let yy = Math.max(0, gy - 420); yy < gy - 140 && !ok; yy += 8) for (let xx = x - 220; xx <= x + 220 && !ok; xx += 8) ok = solidAt(xx, yy);
+    if (ok) continue;
+    fill(x, Math.round(clamp(gy - rnd(175, 230), 60, gy - 130)));
+    placed.push(x);
+  }
+}
 // which structures each landscape builds
 const BUILD = {
   wiese(ph, k) {
@@ -1097,9 +1361,46 @@ BUILD.fruehstueck = function () {
 };
 function buildStructures(ph, k) {
   tops = []; post = []; sused = [];
-  const b = BUILD[theme.id];
+  const b = BUILD[theme.id], more = MORE[theme.id];
   if (b) b(ph, k);
+  if (more) more(ph, k);
+  fillAnchors();
 }
+// the signature anchor pieces of each world
+const MORE = {
+  wiese(ph, k) {
+    spots(1, 200, (x) => flatAt(x, 22) < 14 && hs[x] < WATERY - 150 && hs[x] > 200).forEach(windmill);
+    k.forEach((c) => { const br = bridgeOver(c, 80); if (br) ropeBridge(br); });
+  },
+  wueste() { spots(1, 180, (x) => flatAt(x, 26) < 12 && hs[x] < WATERY - 150 && hs[x] > 230).forEach(waterTower); },
+  winter() { skiLift(); },
+  inseln(ph, k) {
+    k.forEach((c) => { const br = bridgeOver(c, 70); if (br) ropeBridge(br); });
+    spots(1, 140, (x) => flatAt(x, 14) < 22 && hs[x] < WATERY - 100 && hs[x] > 150).forEach(lighthouse);
+  },
+  vulkan() { spots(1, 130, (x) => hs[x] < WATERY - 140 && hs[x] > 200, 280, W - 280).forEach(ribcage); },
+  schiff() {
+    const side = Math.random() < 0.5 ? 1 : -1, cx = side > 0 ? 140 : W - 140;
+    harbourCrane(cx, side);
+    pier(side > 0 ? 240 : W - 240, side);
+  },
+  suess() {
+    // floating sweets over the hills
+    spots(2, 200, (x) => hs[x] < WATERY - 60, 180, W - 180).forEach((x, i) => {
+      let lo = H; for (let d = -40; d <= 40; d += 10) lo = Math.min(lo, hs[x + d]);
+      const y = Math.round(clamp(lo - rnd(150, 200), 50, lo - 120));
+      if (i % 2) cottonCandy(x, y); else donut(x, y);
+    });
+  },
+  fantasie(ph, k) { k.forEach((c) => { const br = bridgeOver(c, 85); if (br) crystalArch(br); }); },
+  fruehstueck() {
+    // lamps hang over the table, the shelf sits on the wall between them
+    [0.22, 0.5, 0.78].forEach((f) => pendantLamp(Math.round(W * f + rnd(-40, 40)), Math.round(hs[Math.round(W * f)] - rnd(185, 215))));
+    wallShelf(Math.round(W * (Math.random() < 0.5 ? 0.36 : 0.64)));
+    const fr = [cerealBox, milkCarton].sort(() => Math.random() - 0.5);
+    spots(2, 120, (x) => !sused.some((u) => Math.abs(u - x) < 110), 120, W - 120).forEach((x, i) => fr[i](x));
+  }
+};
 // decoration is painted on the terrain image only, so it gets blown away with the ground but never blocks anything
 function decorate() {
   const F = fx();
@@ -1831,7 +2132,8 @@ function placeHazards() {
   const spot = () => {
     for (let t = 0; t < 400; t++) {
       const x = Math.floor(rnd(40, W - 40)), s = surfaceY(x);
-      if (s > WATERY - 60) continue;
+      // barrels and mines only on the real ground, not on lamps or balloons
+      if (s > WATERY - 60 || Math.abs(s - hs[x]) > 30) continue;
       if (Math.abs(surfaceY(x - 6) - surfaceY(x + 6)) > 10) continue;
       if (used.some((u) => Math.abs(u - x) < 45)) continue;
       used.push(x);
